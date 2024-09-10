@@ -1,0 +1,2 @@
+* text=auto eol=lf
+CHANGELOG.md -text merge=union

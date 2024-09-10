@@ -1,0 +1,161 @@
+[build-system]
+requires = ["setuptools >= 40.8.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cosmofy = ["py.typed"]
+
+[project.scripts]
+cosmofy = "cosmofy:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "cosmofy.__version__" }
+
+[project.urls]
+Homepage = "https://github.com/metaist/cosmofy"
+Documentation = "https://metaist.github.io/cosmofy/"
+Repository = "https://github.com/metaist/cosmofy.git"
+Changelog = "https://github.com/metaist/cosmofy/blob/main/CHANGELOG.md"
+
+[project]
+name = "cosmofy"
+description = "Cosmopolitan Python Bundler"
+keywords = ["cosmopolitan", "bundler"]
+
+dynamic = ["version"]
+requires-python = ">=3.8"
+dependencies = [
+  # app => version pinned exactly
+]
+optional-dependencies = { dev = [
+  # dev => version latest
+  "build",
+  "cogapp",
+  "coverage",
+  "mypy",
+  "pdoc3",
+  "pip",
+  "pyright",
+  "pytest-cov",
+  "pytest",
+  "ruff",
+] }
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Metaist LLC", email = "metaist@metaist.com" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Natural Language :: English",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Build Tools",
+  "Typing :: Typed",
+]
+
+[tool.coverage.report]
+exclude_also = ["no cover: start(?s:.)*?no cover: stop"]
+
+[tool.ds.scripts] # run dev scripts <https://github.com/metaist/ds>
+# Lint
+lint = ["ruff-*", "+cspell"]
+ruff-format = "ruff format ${@:-.}"
+ruff-lint = "ruff check --fix ${@:-.}"
+cspell = "cspell --gitignore '**/*.{py,txt,md,markdown}'"
+
+# Type Check
+types = ["pyright", "mypy"]
+pyright = "pyright src test"
+mypy = """
+  mypy \
+    --strict \
+    --install-types \
+    --non-interactive \
+    src test
+"""
+
+# Test
+test.help = "run unit tests"
+test.env = { PYTHONPATH = "src" }
+test.shell = """
+  coverage run --branch --source=src -m \
+    pytest \
+      --doctest-modules \
+      --doctest-ignore-import-errors \
+      $@ src test;
+  coverage report --omit=src/cog_helpers.py -m
+"""
+
+coverage-report = "coverage html"
+coverage-serve = { shell = "python -m http.server 8080", cwd = "htmlcov" }
+coverage = ["coverage-*"]
+
+# Documentation
+docs = ["cog", "pdoc"]
+cog = "cog -r README.md"
+pdoc = """
+  rm -rf docs;
+  mkdir -p docs;
+  pdoc \
+    --html \
+    --output-dir docs \
+    --config sort_identifiers=False \
+    --config show_inherited_members=True \
+    --force src/$(basename $(pwd));
+  mv docs/**/* docs/;
+  touch docs/.nojekyll
+"""
+
+# Common
+dev.help = "lint, type-check, and unit tests"
+dev.composite = ["lint", "types", "test"]
+
+dev-all.help = "check every supported python version"
+dev-all.shell = """
+  ds lint;
+  versions=($(grep -oP '(?<=Python :: )[0-9]+\\.[0-9]+' pyproject.toml));
+  for v in ${versions[@]};
+  do
+    uv run --isolated --all-extras --python $v -- ds types test;
+    echo;
+  done;
+"""
+
+# Build
+build = ["pip install -e .", "python -m build"]
+clean = """
+  rm -rf .mypy_cache;
+  rm -rf .pytest_cache;
+  rm -rf .ruff_cache;
+  rm -rf dist;
+  rm -rf htmlcov;
+  rm -rf src/*.egg-info
+  rm -rf .coverage;
+"""
+
+# Release
+recent.help = "see commits since last tag"
+recent.shell = "git log --oneline --color $(git describe --tags --abbrev=0)..HEAD"
+recent-closed = ["recent | rg 'closes #'"]
+
+release.help = "commit & tag the release"
+release.shell = """
+  git commit -am "release: $1";
+  git tag $1;
+  git push;
+  git push --tags;
+  git checkout main;
+  git merge --no-ff --no-edit prod;
+  git push
+"""

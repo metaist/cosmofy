@@ -1,0 +1,17 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "Autobuild",
+    "codeql",
+    "cosmofy",
+    "mypy",
+    "pdoc",
+    "pypa",
+    "pypi",
+    "pyright",
+    "pytest",
+    "setuptools",
+    "venv"
+  ]
+}
