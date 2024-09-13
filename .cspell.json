@@ -4,7 +4,10 @@
   "words": [
     "Autobuild",
     "codeql",
+    "compresslevel",
     "cosmofy",
+    "fpclose",
+    "levelname",
     "mypy",
     "pdoc",
     "pypa",
@@ -12,6 +15,8 @@
     "pyright",
     "pytest",
     "setuptools",
-    "venv"
+    "venv",
+    "zinfo",
+    "metaist"
   ]
 }

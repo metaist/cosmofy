@@ -35,6 +35,7 @@ optional-dependencies = { dev = [
   "build",
   "cogapp",
   "coverage",
+  "ds-run",
   "mypy",
   "pdoc3",
   "pip",
@@ -133,7 +134,8 @@ dev-all.shell = """
 """
 
 # Build
-build = ["pip install -e .", "python -m build"]
+cosmo = "cosmofy src/cosmofy --args '-m cosmofy --cosmo' --output dist/cosmofy"
+build = ["pip install -e .", "python -m build", "cosmo"]
 clean = """
   rm -rf .mypy_cache;
   rm -rf .pytest_cache;
