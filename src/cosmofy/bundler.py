@@ -31,6 +31,9 @@ from .zipfile2 import ZipFile2
 
 log = logging.getLogger(__name__)
 
+Pkg = Tuple[str, ...]
+"""Package information."""
+
 MODULE_SUFFIXES = (".py", ".pyc")
 """Python module suffixes."""
 
@@ -83,16 +86,6 @@ def compile_python(path: Path, source: Optional[bytes] = None) -> bytearray:
     return data
 
 
-def move_set_executable(src: Path, dest: Path) -> Path:
-    """Move a file and set its executable bit."""
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    # TODO 2024-10-31 @ py3.8 EOL: use `Path` instead of `str`
-    shutil.move(str(src), str(dest))
-    mode = dest.stat().st_mode | stat.S_IEXEC
-    dest.chmod(mode)
-    return dest
-
-
 def expand_globs(start: Path, *patterns: str) -> Iterator[Tuple[Path, Set[str]]]:
     """Yield paths of all glob patterns."""
     seen: Set[Path] = set()
@@ -140,71 +133,93 @@ class Bundler:
         """Construct a bundler."""
         self.args = args
         self.banner = "[DRY RUN] " if args.dry_run else ""
-        self.archive = self.setup_archive()
 
-    def archive_from_clone(
-        self, dest: Path, archive: Optional[ZipFile2] = None
-    ) -> ZipFile2:
-        """Clone the archive from `sys.executable`."""
-        log.debug(f"{self.banner}copy: {sys.executable} to {dest}")
-        if self.args.for_real:
-            shutil.copy(sys.executable, dest)
-
-        log.debug(f"{self.banner}remove: cosmofy")
-        archive = archive or _archive(dest)
-        if self.args.for_real:
-            archive.remove(".args")
-            archive.remove("Lib/site-packages/cosmofy/*")
-        return archive
-
-    def archive_from_cache(
-        self, dest: Path, archive: Optional[ZipFile2] = None
-    ) -> ZipFile2:
-        """Copy the archive from cache."""
-        assert self.args.cache
-
-        log.debug(f"{self.banner}download (if newer): {COSMOFY_PYTHON_URL}")
-        if self.args.for_real:
-            download_if_newer(COSMOFY_PYTHON_URL, self.args.cache / "python")
-
-        src = self.args.cache / "python"
+    def fs_copy(self, src: Path, dest: Path) -> Path:
+        """Copy a file from `src` to `dest`."""
         log.debug(f"{self.banner}copy: {src} to {dest}")
         if self.args.for_real:
             shutil.copy(src, dest)
+        return dest
 
+    def fs_move_executable(self, src: Path, dest: Path) -> Path:
+        """Move a file and set its executable bit."""
+        log.debug(f"{self.banner}move and chmod +x: {src} to {dest}")
+        if self.args.for_real:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            # TODO 2024-10-31 @ py3.8 EOL: use `Path` instead of `str`
+            shutil.move(str(src), str(dest))
+            mode = dest.stat().st_mode | stat.S_IEXEC
+            dest.chmod(mode)
+        return dest
+
+    def from_cache(
+        self, src: Path, dest: Path, archive: Optional[ZipFile2] = None
+    ) -> ZipFile2:
+        """Copy the archive from cache."""
+        log.debug(f"{self.banner}download (if newer): {COSMOFY_PYTHON_URL}")
+        if self.args.for_real:
+            download_if_newer(COSMOFY_PYTHON_URL, src)
+
+        self.fs_copy(src, dest)
         return archive or _archive(dest)
 
-    def archive_from_download(
-        self, dest: Path, archive: Optional[ZipFile2] = None
-    ) -> ZipFile2:
+    def from_download(self, dest: Path, archive: Optional[ZipFile2] = None) -> ZipFile2:
         """Download archive."""
         log.debug(f"{self.banner}download (fresh): {COSMOFY_PYTHON_URL} to {dest}")
         if self.args.for_real:
             download(COSMOFY_PYTHON_URL, dest)
         return archive or _archive(dest)
 
-    def setup_archive(self) -> ZipFile2:
-        """Clone, copy from cache, or download the archive."""
+    def setup_temp(self) -> Tuple[Path, Optional[ZipFile2]]:
+        """Setup a temporary file and construct a ZipFile (if non-dry-run)."""
         archive = None
         if self.args.for_real:
             temp = Path(tempfile.NamedTemporaryFile(delete=False).name)
         else:
             temp = Path(tempfile.gettempprefix()) / "DRY-RUN"
             archive = _archive(io.BytesIO())
+        return temp, archive
 
+    def setup_archive(self) -> ZipFile2:
+        """Clone, copy from cache, or download the archive."""
+        temp, archive = self.setup_temp()
         if self.args.clone:
-            archive = self.archive_from_clone(temp, archive)
+            paths = [".args", "Lib/site-packages/cosmofy/*"]
+            self.fs_copy(Path(sys.executable), temp)
+            archive = self.zip_remove(archive or _archive(temp), *paths)
         elif self.args.cache:
-            archive = self.archive_from_cache(temp, archive)
+            archive = self.from_cache(self.args.cache / "python", temp, archive)
         else:
-            archive = self.archive_from_download(temp, archive)
+            archive = self.from_download(temp, archive)
         return archive
 
-    def add_files(
-        self, include: Iterator[Tuple[Path, Set[str]]], exclude: Set[Path]
-    ) -> Tuple[str, ...]:
-        modules: Dict[Path, Tuple[str, ...]] = {}
-        main_module: Tuple[str, ...] = tuple()
+    def process_file(
+        self, path: Path, module: Pkg, main: Pkg
+    ) -> Tuple[str, bytes, Pkg]:
+        """Search for main module and compile `.py` files."""
+        name, data = path.name, path.read_bytes()
+        if not main and name in MAIN_FILES:
+            main = module[:-1]
+            log.debug(f"found main: {main}")
+
+        # NOTE: We only work on .py files because .pyc files are not searchable.
+        if path.suffix == ".py":
+            if not main and RE_MAIN.search(data):
+                main = module
+                log.debug(f"found main: {main}")
+            name = path.with_suffix(".pyc").name  # change name
+            data = compile_python(path, data)
+        return name, data, main
+
+    def zip_add(
+        self,
+        archive: ZipFile2,
+        include: Iterator[Tuple[Path, Set[str]]],
+        exclude: Set[Path],
+    ) -> Pkg:
+        """Add files to `archive` while searching for `main` entry point."""
+        modules: Dict[Path, Pkg] = {}
+        main: Pkg = tuple()
         pkgs = ("Lib", "site-packages")
         for path, files in include:
             if path in exclude:
@@ -215,65 +230,59 @@ class Bundler:
                 continue
             # path is a file
 
-            data = path.read_bytes()
-            file_name = path.name
-            parent_module = modules.get(path.parent, tuple())
-            if not parent_module and file_name in PACKAGE_FILES:
-                parent_module = (path.parent.name,)
-            modules[path] = parent_module + (path.stem,)
+            parent = modules.get(path.parent, tuple())
+            if not parent and path.name in PACKAGE_FILES:
+                parent = (path.parent.name,)
+            modules[path] = module = parent + (path.stem,)
 
-            if not main_module and file_name in MAIN_FILES:
-                main_module = modules[path][:-1]
-                log.debug(f"found main: {main_module}")
-
-            if path.suffix == ".py":  # can read or compile .pyc
-                if not main_module and RE_MAIN.search(data):
-                    main_module = modules[path]
-                    log.debug(f"found main: {main_module}")
-                data = compile_python(path, data)
-                file_name = path.with_suffix(".pyc").name  # change name
-
-            # ready to add
-            dest = "/".join(pkgs + parent_module + (file_name,))
+            name, data, main = self.process_file(path, module, main)
+            dest = "/".join(pkgs + parent + (name,))
             log.info(f"{self.banner}add: {dest}")
             if self.args.for_real:
-                self.archive.add_file(dest, data, 0o644)
+                archive.add_file(dest, data, 0o644)
 
-        return main_module or next(iter(modules.values()))
+        if not main and modules.values():
+            main = next(iter(modules.values()))
+        return main
 
-    def remove_files(self, patterns: List[str]) -> Bundler:
+    def zip_remove(self, archive: ZipFile2, *patterns: str) -> ZipFile2:
         """Remove glob patterns from the archive."""
-        for_real = not self.args.dry_run
         for pattern in patterns:
             log.info(f"{self.banner}remove: {pattern}")
-            if for_real:
-                self.archive.remove(pattern)
-        return self
+            if self.args.for_real:
+                archive.remove(pattern)
+        return archive
+
+    def write_args(self, archive: ZipFile2, main: Pkg) -> ZipFile2:
+        """Write special .args file."""
+        if self.args.args or main:
+            python_args = self.args.args or f"-m {'.'.join(main)}"
+            log.debug(f"{self.banner}.args = {python_args}")
+            if self.args.for_real:
+                archive.add_file(".args", python_args.replace(" ", "\n"), 0o644)
+        return archive
+
+    def write_output(self, archive: ZipFile2, main: Pkg) -> Path:
+        """Move output to appropriate place."""
+        if not main:
+            main = ("out",)
+        elif main[-1] == "__init__":
+            main = main[:-1]
+
+        output = self.args.output or Path(f"{main[-1]}.com")
+        if archive.filename:
+            self.fs_move_executable(Path(archive.filename), output)
+        return output
 
     def run(self) -> Path:
         """Run the bundler."""
-        args = self.args
-        archive = self.archive
+        archive = self.setup_archive()
+        include = expand_globs(Path.cwd(), *self.args.add)
+        exclude = set(p[0] for p in expand_globs(Path.cwd(), *self.args.exclude))
+        main = self.zip_add(archive, include, exclude)
+        self.zip_remove(archive, *self.args.remove)
+        self.write_args(archive, main)
 
-        include = expand_globs(Path.cwd(), *args.add)
-        exclude = set(p[0] for p in expand_globs(Path.cwd(), *args.exclude))
-        main_module = self.add_files(include, exclude)
-        self.remove_files(args.remove)
-        # files added & removed
-
-        python_args = args.args or f"-m {'.'.join(main_module)}"
-        log.debug(f"{self.banner}.args = {python_args}")
-        if self.args.for_real:
-            archive.add_file(".args", python_args.replace(" ", "\n"), 0o644)
-        # .args written
-
-        if main_module[-1] == "__init__":
-            main_module = main_module[:-1]
-        output = args.output or Path(f"{main_module[-1]}.com")
-
-        log.debug(f"{self.banner}move and chmod +x: {output}")
-        if self.args.for_real and archive.filename:
-            move_set_executable(Path(archive.filename), output)
-
+        output = self.write_output(archive, main)
         log.info(f"{self.banner}bundled: {output}")
         return output
