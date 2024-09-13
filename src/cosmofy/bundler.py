@@ -66,7 +66,7 @@ def _pack_uint32(x: Union[int, float]) -> bytes:
 
 def compile_python(path: Path, source: Optional[bytes] = None) -> bytearray:
     """Return the bytecode."""
-    source = source or path.read_bytes()
+    source = path.read_bytes() if source is None else source
     stats = path.stat()
     mtime = stats.st_mtime
     source_size = stats.st_size
