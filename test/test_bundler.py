@@ -1,8 +1,10 @@
 """Test bundler."""
 
 # std
-from unittest.mock import patch
 from pathlib import Path
+from typing import Iterator
+from typing import Set
+from typing import Tuple
 import io
 import os
 import tempfile
@@ -18,6 +20,8 @@ from cosmofy.zipfile2 import ZipFile2
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 (EXAMPLES / "empty").mkdir(parents=True, exist_ok=True)  # cannot be committed
+
+Include = Iterator[Tuple[Path, Set[str]]]
 
 
 def test_main_detector() -> None:
@@ -50,11 +54,11 @@ def test_globs() -> None:
     src = EXAMPLES / "pkg-nested"
     assert list(bundler.expand_globs(src)) == []  # no patterns
 
-    items = bundler.expand_globs(src, ".")
-    assert next(items) == (src, {"__init__.py"})
+    items_i = bundler.expand_globs(src, ".")
+    assert next(items_i) == (src, {"__init__.py"})
 
-    items = bundler.expand_globs(src, "..")
-    assert next(items) == (src.parent, set())  # examples only has sub-folders
+    items_i = bundler.expand_globs(src, "..")
+    assert next(items_i) == (src.parent, set())  # examples only has sub-folders
 
     items = list(bundler.expand_globs(src, "*"))
     assert items[0] == (src / "__init__.py", set())
@@ -158,7 +162,7 @@ def test_process() -> None:
     path = EXAMPLES / "pkg-with-main" / "py.typed"
     out = test.process_file(path, ("pkg-with-main", "py"), ("pkg-with-main",))
     assert out[0] == path.name
-    assert out[1] == b""
+    assert out[1] == path.read_bytes()
     assert out[2] == ("pkg-with-main",)
 
 
@@ -170,19 +174,21 @@ def test_add() -> None:
 
     # empty directory
     path = EXAMPLES / "empty"
-    include = [(path, set())]
-    assert test.zip_add(archive, iter(include), {}) == ()
+    include: Include = iter([(path, set())])
+    assert test.zip_add(archive, include, set()) == ()
 
     # __init__.py without its parent
     path = EXAMPLES / "pkg-with-init" / "__init__.py"
-    include = [(path, set())]
-    assert test.zip_add(archive, iter(include), {}) == (path.parent.name, path.stem)
-    assert real.zip_add(archive, iter(include), {}) == (path.parent.name, path.stem)
+    include = iter([(path, set())])
+    assert test.zip_add(archive, include, set()) == (path.parent.name, path.stem)
+
+    include = iter([(path, set())])
+    assert real.zip_add(archive, include, set()) == (path.parent.name, path.stem)
 
     # no main found
     path = EXAMPLES / "single-file" / "file-no-main.py"
-    include = [(path, set())]
-    assert test.zip_add(archive, iter(include), {}) == (path.stem,)
+    include = iter([(path, set())])
+    assert test.zip_add(archive, include, set()) == (path.stem,)
 
     # include + exclude
     path = EXAMPLES / "pkg-nested"
@@ -217,7 +223,7 @@ def test_write_output() -> None:
     """Write output zip."""
     test = Bundler(Args(dry_run=True, for_real=False))
     with tempfile.NamedTemporaryFile() as f:
-        assert test.write_output(_archive(f), tuple()) == Path("out.com")
+        assert test.write_output(_archive(f.name), tuple()) == Path("out.com")
 
     archive = _archive(io.BytesIO())
     assert test.write_output(archive, ("foo", "__init__")) == Path("foo.com")

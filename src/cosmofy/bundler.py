@@ -6,7 +6,6 @@ from importlib.util import MAGIC_NUMBER
 from pathlib import Path
 from typing import Dict
 from typing import Iterator
-from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
@@ -195,7 +194,7 @@ class Bundler:
 
     def process_file(
         self, path: Path, module: Pkg, main: Pkg
-    ) -> Tuple[str, bytes, Pkg]:
+    ) -> Tuple[str, Union[bytes, bytearray], Pkg]:
         """Search for main module and compile `.py` files."""
         name, data = path.name, path.read_bytes()
         if not main and name in MAIN_FILES:
