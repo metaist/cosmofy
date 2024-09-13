@@ -86,7 +86,8 @@ def compile_python(path: Path, source: Optional[bytes] = None) -> bytearray:
 def move_set_executable(src: Path, dest: Path) -> Path:
     """Move a file and set its executable bit."""
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(src, dest)
+    # TODO 2024-10-31 @ py3.8 EOL: use `Path` instead of `str`
+    shutil.move(str(src), str(dest))
     mode = dest.stat().st_mode | stat.S_IEXEC
     dest.chmod(mode)
     return dest
@@ -159,9 +160,10 @@ class Bundler:
         if self.args.for_real:
             download_if_newer(COSMOFY_PYTHON_URL, self.args.cache / "python")
 
-        log.debug(f"{self.banner}copy: {self.args.cache / "python"} to {dest}")
+        src = self.args.cache / "python"
+        log.debug(f"{self.banner}copy: {src} to {dest}")
         if self.args.for_real:
-            shutil.copy(self.args.cache / "python", dest)
+            shutil.copy(src, dest)
 
         return archive or _archive(dest)
 

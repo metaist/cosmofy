@@ -1,8 +1,8 @@
 """Test bundler."""
 
 # std
-import io
 from pathlib import Path
+import io
 
 # pkg
 from cosmofy.bundler import RE_MAIN

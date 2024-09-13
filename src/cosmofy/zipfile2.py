@@ -19,21 +19,20 @@ now = datetime.now()
 class ZipFile2(ZipFile):
     """Extension of `zipfile.ZipFile` that allows removing members."""
 
-    def add_dir(self, name: str, mode: int = 0o777, date: datetime = now) -> ZipFile2:
-        """Add a directory to an archive with permissions."""
-
-        if not name.endswith("/"):
-            name += "/"
-
-        info = ZipInfo(name, date.timetuple()[:6])
-        info.compress_size = 0
-        info.CRC = 0
-        info.external_attr = ((0o40000 | mode) & 0xFFFF) << 16
-        info.external_attr |= 0x10
-        info.file_size = 0
-        info.flag_bits |= 0x800
-        self.mkdir(info)
-        return self
+    # NOTE: This function only works on python >= 3.11
+    # def add_dir(self, name: str, mode: int = 0o777, date: datetime = now) -> ZipFile2:
+    #     """Add a directory to an archive with permissions."""
+    #     if not name.endswith("/"):
+    #         name += "/"
+    #     info = ZipInfo(name, date.timetuple()[:6])
+    #     info.compress_size = 0
+    #     info.CRC = 0
+    #     info.external_attr = ((0o40000 | mode) & 0xFFFF) << 16
+    #     info.external_attr |= 0x10
+    #     info.file_size = 0
+    #     info.flag_bits |= 0x800
+    #     self.mkdir(info)
+    #     return self
 
     def add_file(
         self,
