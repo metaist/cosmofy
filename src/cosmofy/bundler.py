@@ -97,7 +97,14 @@ def expand_globs(start: Path, *patterns: str) -> Iterator[Tuple[Path, Set[str]]]
     """Yield paths of all glob patterns."""
     seen: Set[Path] = set()
     for pattern in patterns:
-        for path in sorted(start.glob(pattern)):
+        if pattern == ".":
+            paths = [start]
+        elif pattern == "..":
+            paths = [start.parent]
+        else:
+            paths = sorted(start.glob(pattern))
+
+        for path in paths:
             if not path.is_dir():
                 if path not in seen:
                     seen.add(path)
@@ -211,6 +218,8 @@ class Bundler:
             data = path.read_bytes()
             file_name = path.name
             parent_module = modules.get(path.parent, tuple())
+            if not parent_module and file_name in PACKAGE_FILES:
+                parent_module = (path.parent.name,)
             modules[path] = parent_module + (path.stem,)
 
             if not main_module and file_name in MAIN_FILES:
