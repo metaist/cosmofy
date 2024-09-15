@@ -19,6 +19,8 @@ now = datetime.now()
 class ZipFile2(ZipFile):
     """Extension of `zipfile.ZipFile` that allows removing members."""
 
+    _writing: bool
+
     # NOTE: This function only works on python >= 3.11
     # def add_dir(self, name: str, mode: int = 0o777, date: datetime = now) -> ZipFile2:
     #     """Add a directory to an archive with permissions."""
@@ -56,7 +58,7 @@ class ZipFile2(ZipFile):
             raise RuntimeError("remove() requires mode 'a'")
         if not self.fp:
             raise ValueError("Attempt to write to ZIP archive that was already closed")
-        if self._writing:  # type: ignore
+        if self._writing:
             raise ValueError(
                 "Can't write to ZIP archive while an open writing handle exists."
             )
@@ -76,32 +78,30 @@ class ZipFile2(ZipFile):
         return self
 
     def _remove_member(self, member: ZipInfo) -> ZipFile2:
-        # get a sorted filelist by header offset, in case the dir order
-        # doesn't match the actual entry order
+        """Internal method to remove a member."""
         fp = self.fp
         assert fp
 
+        # sort by header_offset in case central dir has different order
         entry_offset = 0
         filelist = sorted(self.filelist, key=attrgetter("header_offset"))
-        for i in range(len(filelist)):
-            info = filelist[i]
-            # find the target member
-            if info.header_offset < member.header_offset:
+        last_index = len(filelist) - 1
+        for i, info in enumerate(filelist):
+            if info.header_offset < member.header_offset:  # keep going until target
                 continue
 
             # get the total size of the entry
             entry_size = None
-            if i == len(filelist) - 1:
+            if i == last_index:
                 entry_size = self.start_dir - info.header_offset
             else:
                 entry_size = filelist[i + 1].header_offset - info.header_offset
 
-            # found the member, set the entry offset
-            if member == info:
+            if member == info:  # set the entry offset
                 entry_offset = entry_size
                 continue
+            # move all subsequent entries
 
-            # Move entry
             # read the actual entry data
             fp.seek(info.header_offset)
             entry_data = fp.read(entry_size)
@@ -122,14 +122,15 @@ class ZipFile2(ZipFile):
 
         # seek to the start of the central dir
         fp.seek(self.start_dir)
-
         return self
 
     def _write_end_record(self) -> None:
+        """Write the end record to the file and truncate extra space."""
         super()._write_end_record()  # type: ignore
         if self.fp and hasattr(self.fp, "truncate"):
             self.fp.truncate()
-        else:
+        else:  # pragma: no cover
+            # This is hard to test without messing up other things.
             print(
                 "WARNING: truncate unimplemented, zip WILL be corrupted if you removed a member!"
             )
