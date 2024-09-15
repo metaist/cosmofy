@@ -91,15 +91,17 @@ def test_copy() -> None:
 def test_move() -> None:
     """Move and make executable."""
     content = b"test content"
-    with tempfile.NamedTemporaryFile() as f, tempfile.NamedTemporaryFile() as g:
+    # we don't want to try and close this file
+    f = tempfile.NamedTemporaryFile(delete=False)
+    with tempfile.NamedTemporaryFile() as g:
         f.write(content)
         f.flush()
 
         src, dest = Path(f.name), Path(g.name)
         Bundler(Args(dry_run=True, for_real=False)).fs_move_executable(src, dest)
         Bundler(Args()).fs_move_executable(src, dest)
-        assert dest.read_bytes() == content
         assert os.access(dest, os.X_OK)
+        assert dest.read_bytes() == content
 
 
 def test_from_download() -> None:
