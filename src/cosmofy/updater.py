@@ -27,8 +27,9 @@ def download(url: str, path: Path, chunk_size: int = CHUNK_SIZE) -> Path:
 
 def download_if_newer(url: str, path: Path, chunk_size: int = CHUNK_SIZE) -> Path:
     """Download `url` to `path` if `url` is newer."""
-    need_download = not path.exists()  # guess: exists => already downloaded
-    if path.exists():
+    exists = path.exists()
+    need_download = not exists  # guess: exists => already downloaded
+    if exists:
         local = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
         response = urlopen(Request(url, method="HEAD"))
         remote = parsedate_to_datetime(response.headers.get("Last-Modified"))

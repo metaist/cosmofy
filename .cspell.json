@@ -8,7 +8,9 @@
     "cosmofy",
     "fpclose",
     "levelname",
+    "metaist",
     "mypy",
+    "parsedate",
     "pdoc",
     "pypa",
     "pypi",
@@ -16,7 +18,6 @@
     "pytest",
     "setuptools",
     "venv",
-    "zinfo",
-    "metaist"
+    "zinfo"
   ]
 }

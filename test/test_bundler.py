@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterator
 from typing import Set
 from typing import Tuple
+from unittest.mock import patch
 import io
 import os
 import tempfile
@@ -12,6 +13,7 @@ import tempfile
 # pkg
 from cosmofy import bundler
 from cosmofy.args import Args
+from cosmofy.args import COSMOFY_PYTHON_URL
 from cosmofy.bundler import _archive
 from cosmofy.bundler import _pack_uint32
 from cosmofy.bundler import Bundler
@@ -108,10 +110,15 @@ def test_from_download() -> None:
         src, dest = Path(f.name), Path(g.name)
 
         test.from_cache(src, dest)
-        real.from_cache(src, dest)
-
         test.from_download(dest)
-        real.from_download(dest)
+
+        with patch("cosmofy.bundler.Bundler.fs_copy") as mock:
+            real.from_cache(src, dest)
+            mock.assert_called_once_with(src, dest)
+
+        with patch("cosmofy.bundler.download") as mock:
+            real.from_download(dest)
+            mock.assert_called_once_with(COSMOFY_PYTHON_URL, dest)
 
 
 def test_setup_temp() -> None:
