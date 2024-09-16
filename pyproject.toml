@@ -134,7 +134,13 @@ dev-all.shell = """
 """
 
 # Build
-cosmo = "cosmofy src/cosmofy --args '-m cosmofy --cosmo' --output dist/cosmofy --receipt"
+cosmo = """
+  cosmofy src/cosmofy \
+    --output dist/cosmofy --receipt \
+    --args '-m cosmofy --cosmo' \
+    --release-url "https://github.com/metaist/cosmofy/releases/latest/download/cosmofy" \
+    $@
+"""
 build = ["pip install -e .", "python -m build", "cosmo"]
 clean = """
   rm -rf .mypy_cache;

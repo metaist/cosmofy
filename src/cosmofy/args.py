@@ -84,12 +84,13 @@ FILES
     If omitted, it will be `"-m <main_module>"` where `<main_module>` is
     the the same as the default for `--output`.
 
-  --add-updater URL
-    Add `cosmofy.updater` which implements a `--self-update` argument by
-    checking for and downloading updates from `URL`.
+  --release-url URL
+    Add `cosmofy.updater` which checks for a `--self-update` option
+    and updates the Cosmopolitan app from `URL` if there is a newer release.
 
-    NOTE: The updater supports most interface options for `--args`, but
-    not all of them. For a list of supported options see:
+    NOTE: The updater will alter `--args` so that it gets called first.
+    It supports most Python Command Line interface options (like `-m`).
+    For a full list see:
     https://github.com/metaist/cosmofy#supported-python-cli
 
   --add GLOB, <add>
@@ -148,10 +149,7 @@ class Args:
     clone: bool = False
     """Whether to clone `cosmofy` to get python."""
 
-    # files
-
-    args: str = ""
-    """Args to pass to Cosmopolitan python."""
+    # output
 
     output: Optional[Path] = None
     """Path to the output file."""
@@ -159,8 +157,13 @@ class Args:
     receipt: bool = False
     """Whether to create a JSON file with the output date, version, and hash."""
 
-    add_updater: str = ""
-    """Add updater to a given URL."""
+    # files
+
+    args: str = ""
+    """Args to pass to Cosmopolitan python."""
+
+    release_url: str = ""
+    """URL of the latest release."""
 
     add: List[str] = dataclasses.field(default_factory=list)
     """Globs to add."""
@@ -202,7 +205,7 @@ class Args:
                 setattr(args, prop, True)
 
             # str
-            elif arg in ["--add-updater", "--args", "--python-url"]:
+            elif arg in ["--args", "--python-url", "--release-url"]:
                 if not argv:
                     raise ValueError(f"Expected argument for option: {arg}")
                 setattr(args, prop, argv.pop(0))
