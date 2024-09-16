@@ -86,8 +86,8 @@ def create_receipt(
     }
 
 
-def self_update(src: Path) -> int:
-    print("SELF UPDATE")
+def self_update(url: str, path: Path) -> int:
+    print("SELF UPDATE", url, path)
     return 0
 
 
@@ -242,8 +242,9 @@ def run_python(argv: List[str]) -> int:
 def main(argv: Optional[List[str]] = None) -> int:
     """Main entry point for self-updater."""
     args = argv or sys.argv[1:]
+    url = args.pop(0)
     if "--self-update" in args:
-        return self_update(Path(sys.executable))
+        return self_update(url, Path(sys.executable))
     return run_python(args)
 
 

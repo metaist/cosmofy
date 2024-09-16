@@ -81,8 +81,9 @@ def test_run() -> None:
 
 def test_main() -> None:
     """Argument interceptor."""
-    assert main(split("-V")) == 0  # runs python --version
+    url = "'https://example.com'"
+    assert main(split(f"{url} -V")) == 0  # runs python --version
 
     with patch("cosmofy.updater.self_update") as _self_update:
         _self_update.return_value = 0
-        assert main(split("-m other-module --internal-option --self-update")) == 0
+        assert main(split(f"{url} -m other-module --option --self-update")) == 0
