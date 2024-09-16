@@ -34,9 +34,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 1
 
     if args.debug:
-        log.setLevel(logging.DEBUG)
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.DEBUG)
         formatter = logging.Formatter(log_debug)
-        for handler in logging.getLogger().handlers:
+        for handler in root_logger.handlers:
             handler.setFormatter(formatter)
         log.debug(args)
 
