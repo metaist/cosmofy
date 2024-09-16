@@ -4,6 +4,7 @@
 from __future__ import annotations
 from importlib.util import MAGIC_NUMBER
 from pathlib import Path
+from shlex import split
 from typing import Dict
 from typing import Iterator
 from typing import Optional
@@ -28,6 +29,7 @@ from .args import COSMOFY_PYTHON_URL
 from .updater import create_receipt
 from .updater import download
 from .updater import download_if_newer
+from .updater import PythonArgs
 from .zipfile2 import ZipFile2
 
 log = logging.getLogger(__name__)
@@ -255,10 +257,44 @@ class Bundler:
                 archive.remove(pattern)
         return archive
 
+    def add_updater(self, archive: ZipFile2, python_args: str) -> str:
+        """Add `cosmofy.updater` to `archive`."""
+        update_url = self.args.release_url
+        if not update_url:
+            return python_args
+
+        try:
+            PythonArgs.parse(split(python_args))  # we can handle these args
+            python_args = f"-m cosmofy.updater '{update_url}' {python_args}"
+        except ValueError as e:
+            log.error(f"Cannot add updater: {e}")
+            sys.exit(1)
+
+        dest = "Lib/site-packages/cosmofy/updater.pyc"
+        if archive.NameToInfo.get(dest):  # already done
+            log.debug(f"{self.banner}already exists: {dest}")
+            return python_args
+
+        if self.args.cosmo:  # clone from self
+            log.debug(f"{self.banner}clone from: {sys.executable}")
+            bundle = ZipFile2(sys.executable, "r")
+            data = bundle.read(dest)
+        else:
+            path = Path(__file__).parent / "updater.py"
+            log.debug(f"{self.banner}compile from: {path}")
+            data = compile_python(path)
+
+        log.info(f"{self.banner}add: {dest}")
+        if self.args.for_real:
+            archive.add_file(dest, data, 0o644)
+
+        return python_args
+
     def write_args(self, archive: ZipFile2, main: Pkg) -> ZipFile2:
         """Write special .args file."""
         if self.args.args or main:
             python_args = self.args.args or f"-m {'.'.join(main)}"
+            python_args = self.add_updater(archive, python_args)
             log.debug(f"{self.banner}.args = {python_args}")
             if self.args.for_real:
                 archive.add_file(".args", python_args.replace(" ", "\n"), 0o644)
@@ -286,7 +322,7 @@ class Bundler:
         log.debug(f"{self.banner} receipt: {receipt}")
         if self.args.for_real:
             output.write_text(receipt)
-        log.debug(f"{self.banner}wrote JSON receipt {output}")
+        log.info(f"{self.banner}wrote JSON receipt: {output}")
         return self
 
     def run(self) -> Path:
