@@ -26,9 +26,10 @@ USAGE = f"""cosmofy: Cosmopolitan Python Bundler
 USAGE
 
   cosmofy
-    [--help] [--version] [--debug] [--dry-run]
+    [--help] [--version] [--debug] [--dry-run] [--self-update]
     [--python-url URL] [--cache PATH] [--clone]
-    [--output PATH] [--receipt] [--args STRING]
+    [--output PATH] [--receipt]
+    [--args STRING] [--add-updater URL]
     <add>... [--exclude GLOB]... [--remove GLOB]...
 
 GENERAL
@@ -44,6 +45,9 @@ GENERAL
 
   -n, --dry-run
     Do not make any file system changes.
+
+  --self-update
+    Update `cosmofy` to the latest version.
 
 CACHE
 
@@ -79,6 +83,14 @@ FILES
 
     If omitted, it will be `"-m <main_module>"` where `<main_module>` is
     the the same as the default for `--output`.
+
+  --add-updater URL
+    Add `cosmofy.updater` which implements a `--self-update` argument by
+    checking for and downloading updates from `URL`.
+
+    NOTE: The updater supports most interface options for `--args`, but
+    not all of them. For a list of supported options see:
+    https://github.com/metaist/cosmofy#supported-python-cli
 
   --add GLOB, <add>
     At least one glob-like patterns to add. Folders are recursively added.
@@ -147,8 +159,8 @@ class Args:
     receipt: bool = False
     """Whether to create a JSON file with the output date, version, and hash."""
 
-    paths: List[Path] = dataclasses.field(default_factory=list)
-    """Paths to add."""
+    add_updater: str = ""
+    """Add updater to a given URL."""
 
     add: List[str] = dataclasses.field(default_factory=list)
     """Globs to add."""
