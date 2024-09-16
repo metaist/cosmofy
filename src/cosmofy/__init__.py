@@ -61,8 +61,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
         return 1
 
-    # output = Bundler(args).run()
-    # TODO: generate json receipt if requested
     Bundler(args).run()
     return 0
 

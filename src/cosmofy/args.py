@@ -65,6 +65,9 @@ FILES
   -o PATH, --output PATH
     Path to output file (see below for default value).
 
+  --receipt
+    Whether to create a JSON file with the output date, version, and hash.
+
   --args STRING
     Cosmopolitan Python arguments (see below for default value).
 
@@ -118,8 +121,15 @@ class Args:
     dry_run: bool = False
     """Whether we should suppress any file-system operations."""
 
-    for_real: bool = True
-    """Internal value for the opposite of `dry_run`."""
+    @property
+    def for_real(self) -> bool:
+        """Internal value for the opposite of `dry_run`."""
+        return not self.dry_run
+
+    @for_real.setter
+    def for_real(self, value: bool) -> None:
+        """Set dry_run."""
+        self.dry_run = not value
 
     # cache
 
@@ -139,6 +149,9 @@ class Args:
 
     output: Optional[Path] = None
     """Path to the output file."""
+
+    receipt: bool = False
+    """Whether to create a JSON file with the output date, version, and hash."""
 
     paths: List[Path] = dataclasses.field(default_factory=list)
     """Paths to add."""
@@ -177,6 +190,7 @@ class Args:
                 "--debug",
                 "--dry-run",
                 "--help",
+                "--receipt",
                 "--version",
             ]:
                 setattr(args, prop, True)

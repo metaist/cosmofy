@@ -134,7 +134,7 @@ dev-all.shell = """
 """
 
 # Build
-cosmo = "cosmofy src/cosmofy --args '-m cosmofy --cosmo' --output dist/cosmofy"
+cosmo = "cosmofy src/cosmofy --args '-m cosmofy --cosmo' --output dist/cosmofy --receipt"
 build = ["pip install -e .", "python -m build", "cosmo"]
 clean = """
   rm -rf .mypy_cache;

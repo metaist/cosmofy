@@ -11,6 +11,7 @@ from typing import Set
 from typing import Tuple
 from typing import Union
 import io
+import json
 import logging
 import marshal
 import os
@@ -24,6 +25,7 @@ import zipfile
 # pkg
 from .args import Args
 from .args import COSMOFY_PYTHON_URL
+from .updater import create_receipt
 from .updater import download
 from .updater import download_if_newer
 from .zipfile2 import ZipFile2
@@ -147,7 +149,7 @@ class Bundler:
             dest.parent.mkdir(parents=True, exist_ok=True)
             # TODO 2024-10-31 @ py3.8 EOL: use `Path` instead of `str`
             shutil.move(str(src), str(dest))
-            mode = dest.stat().st_mode | stat.S_IEXEC
+            mode = dest.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
             dest.chmod(mode)
         return dest
 
@@ -273,6 +275,19 @@ class Bundler:
             self.fs_move_executable(Path(archive.filename), output)
         return output
 
+    def write_receipt(self, path: Path) -> Bundler:
+        """Write a JSON receipt for the bundle."""
+        if not self.args.receipt:
+            return self
+
+        output = path.with_suffix(f"{path.suffix}.json")
+        receipt = json.dumps(create_receipt(path))
+        log.debug(f"{self.banner} receipt: {receipt}")
+        if self.args.for_real:
+            output.write_text(receipt)
+        log.debug(f"{self.banner}wrote JSON receipt {output}")
+        return self
+
     def run(self) -> Path:
         """Run the bundler."""
         archive = self.setup_archive()
@@ -281,7 +296,9 @@ class Bundler:
         main = self.zip_add(archive, include, exclude)
         self.zip_remove(archive, *self.args.remove)
         self.write_args(archive, main)
+        archive.close()
 
         output = self.write_output(archive, main)
         log.info(f"{self.banner}bundled: {output}")
+        self.write_receipt(output)
         return output

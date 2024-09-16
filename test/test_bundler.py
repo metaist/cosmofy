@@ -6,6 +6,7 @@ from typing import Iterator
 from typing import Set
 from typing import Tuple
 from unittest.mock import patch
+from unittest.mock import MagicMock
 import io
 import os
 import tempfile
@@ -83,7 +84,7 @@ def test_copy() -> None:
         f.flush()
 
         src, dest = Path(f.name), Path(g.name)
-        Bundler(Args(dry_run=True, for_real=False)).fs_copy(src, dest)
+        Bundler(Args(dry_run=True)).fs_copy(src, dest)
         Bundler(Args()).fs_copy(src, dest)
         assert dest.read_bytes() == content
 
@@ -98,7 +99,7 @@ def test_move() -> None:
         f.flush()
 
         src, dest = Path(f.name), Path(g.name)
-        Bundler(Args(dry_run=True, for_real=False)).fs_move_executable(src, dest)
+        Bundler(Args(dry_run=True)).fs_move_executable(src, dest)
         Bundler(Args()).fs_move_executable(src, dest)
         assert os.access(dest, os.X_OK)
         assert dest.read_bytes() == content
@@ -106,7 +107,7 @@ def test_move() -> None:
 
 def test_from_download() -> None:
     """Archive from cache/download."""
-    test = Bundler(Args(dry_run=True, for_real=False))
+    test = Bundler(Args(dry_run=True))
     real = Bundler(Args())
     with tempfile.NamedTemporaryFile() as f, tempfile.NamedTemporaryFile() as g:
         src, dest = Path(f.name), Path(g.name)
@@ -125,7 +126,7 @@ def test_from_download() -> None:
 
 def test_setup_temp() -> None:
     """Setup tempfile."""
-    test = Bundler(Args(dry_run=True, for_real=False)).setup_temp()
+    test = Bundler(Args(dry_run=True)).setup_temp()
     assert isinstance(test[0], Path)
     assert isinstance(test[1], ZipFile2)
 
@@ -138,20 +139,18 @@ def test_setup_temp() -> None:
 def test_setup_archive() -> None:
     """Setup archive."""
     # clone (dry run)
-    assert Bundler(
-        Args(dry_run=True, for_real=False, cosmo=True, clone=True)
-    ).setup_archive()
+    assert Bundler(Args(dry_run=True, cosmo=True, clone=True)).setup_archive()
 
     # cache (dry run)
-    assert Bundler(Args(dry_run=True, for_real=False)).setup_archive()
+    assert Bundler(Args(dry_run=True)).setup_archive()
 
     # fresh (dry run)
-    assert Bundler(Args(dry_run=True, for_real=False, cache=None)).setup_archive()
+    assert Bundler(Args(dry_run=True, cache=None)).setup_archive()
 
 
 def test_process() -> None:
     """Process a file."""
-    test = Bundler(Args(dry_run=True, for_real=False))
+    test = Bundler(Args(dry_run=True))
 
     # find __main__ in file
     path = EXAMPLES / "pkg-with-init" / "__init__.py"
@@ -177,7 +176,7 @@ def test_process() -> None:
 
 def test_add() -> None:
     """Add files."""
-    test = Bundler(Args(dry_run=True, for_real=False))
+    test = Bundler(Args(dry_run=True))
     real = Bundler(Args())
     archive = _archive(io.BytesIO())
 
@@ -208,7 +207,7 @@ def test_add() -> None:
 
 def test_remove() -> None:
     """Remove files."""
-    test = Bundler(Args(dry_run=True, for_real=False))
+    test = Bundler(Args(dry_run=True))
     real = Bundler(Args())
     with tempfile.NamedTemporaryFile() as f:
         archive = _archive(f.name)
@@ -219,7 +218,7 @@ def test_remove() -> None:
 
 def test_write_args() -> None:
     """Write .args."""
-    test = Bundler(Args(dry_run=True, for_real=False))
+    test = Bundler(Args(dry_run=True))
     archive = _archive(io.BytesIO())
     assert test.write_args(archive, tuple())  # skip writing
     assert test.write_args(archive, ("foo", "__init__"))
@@ -230,7 +229,7 @@ def test_write_args() -> None:
 
 def test_write_output() -> None:
     """Write output zip."""
-    test = Bundler(Args(dry_run=True, for_real=False))
+    test = Bundler(Args(dry_run=True))
     with tempfile.NamedTemporaryFile() as f:
         assert test.write_output(_archive(f.name), tuple()) == Path("out.com")
 
@@ -239,7 +238,23 @@ def test_write_output() -> None:
     assert test.write_output(archive, ("foo", "bar")) == Path("bar.com")
 
 
+@patch("cosmofy.bundler.create_receipt")
+def test_write_receipt(_create_receipt: MagicMock) -> None:
+    """Write receipt."""
+    _create_receipt.return_value = {}
+
+    test = Bundler(Args(receipt=True, dry_run=True))
+    real = Bundler(Args(receipt=True))
+    with tempfile.NamedTemporaryFile() as f:
+        path = Path(f.name)
+        test.write_receipt(path)
+        _create_receipt.assert_called()
+
+        real.write_receipt(path)
+        _create_receipt.assert_called()
+
+
 def test_run() -> None:
     """Run bundler."""
-    test = Bundler(Args(dry_run=True, for_real=False))
+    test = Bundler(Args(dry_run=True))
     assert test.run() == Path("out.com")

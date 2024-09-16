@@ -6,6 +6,7 @@ from datetime import timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import patch
+import sys
 
 # pkg
 from cosmofy import updater
@@ -116,3 +117,17 @@ def test_download_if_not_newer(
     _urlopen.assert_called_once()
     _download.assert_not_called()
     assert result == path
+
+
+def test_receipt() -> None:
+    """Generate a receipt."""
+    path = Path(sys.executable)
+    data = updater.create_receipt(path, version="1.0.0")
+    assert isinstance(data, dict)
+
+    data = updater.create_receipt(path)
+    assert isinstance(data, dict)
+
+    path = Path(__file__).parent.parent / "examples" / "single-file" / "file-no-main.py"
+    data = updater.create_receipt(path)
+    assert isinstance(data, dict)
