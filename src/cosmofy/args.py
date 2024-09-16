@@ -28,7 +28,7 @@ USAGE
   cosmofy
     [--help] [--version] [--debug] [--dry-run]
     [--python-url URL] [--cache PATH] [--clone]
-    [--output PATH] [--args STRING]
+    [--output PATH] [--receipt] [--args STRING]
     <add>... [--exclude GLOB]... [--remove GLOB]...
 
 GENERAL
@@ -57,19 +57,28 @@ CACHE
     [env: COSMOFY_CACHE_DIR={COSMOFY_CACHE_DIR}]
 
   --clone
-    EXPERIMENTAL: Whether to obtain python by cloning `cosmofy` and
-    removing itself instead of downloading it from `--python-url`
+    Obtain python by cloning `cosmofy` and removing itself instead of
+    downloading it from `--python-url`.
+
+OUTPUT
+
+  -o PATH, --output PATH
+    Path to output file.
+
+    If omitted, it will be `<main_module>.com` where `<main_module>`
+    where `<main_module>` is the first module with a `__main__.py` or file with  checks for `__name__ == "__main__"`.
+
+  --receipt
+    Create a JSON file with the `--output` date, version, and hash. Written
+    to `<output>.json`.
 
 FILES
 
-  -o PATH, --output PATH
-    Path to output file (see below for default value).
-
-  --receipt
-    Whether to create a JSON file with the output date, version, and hash.
-
   --args STRING
-    Cosmopolitan Python arguments (see below for default value).
+    Cosmopolitan Python arguments.
+
+    If omitted, it will be `"-m <main_module>"` where `<main_module>` is
+    the the same as the default for `--output`.
 
   --add GLOB, <add>
     At least one glob-like patterns to add. Folders are recursively added.
@@ -78,29 +87,14 @@ FILES
   -x GLOB, --exclude GLOB
     One or more glob-like patterns to exclude from being added.
 
-    Common things to exclude are: "**/*.egg-info/*" and "**/__pycache__/*".
+    Common things to exclude are egg files and python cache:
+    $ cosmofy src -x "**/*.egg-info/*" -x "**/__pycache__/*"
 
   --rm GLOB, --remove GLOB
     One or more glob-like patters to remove from the output.
 
     Common things to remove are `pip`, terminal info, and SSL certs:
     $ cosmofy src/my_module --rm 'usr/*' --rm 'Lib/site-packages/pip/*'
-
-NOTES
-
-  When `--args` or `--output` is missing:
-    - If `<path>` is a single file:
-        --args = "-m <path_without_suffix>"
-        --output = "<path_without_suffix>.com"
-
-    - If `<path>` contains a `__main__.py`, the first one encountered:
-        --args = "-m <parent_folder>"
-        --output = "<parent_folder>.com"
-
-    - If `<path>` contains a `__init__.py`, we search for the first file
-      that contains the line `if __name__ == '__main__'`:
-        --args = "-m <file_without_suffix>"
-        --output = "<file_without_suffix>.com"
 """
 
 
