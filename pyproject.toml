@@ -9,7 +9,7 @@ where = ["src"]
 cosmofy = ["py.typed"]
 
 [project.scripts]
-cosmofy = "cosmofy:main"
+cosmofy = "cosmofy.__main__:main"
 
 [tool.setuptools.dynamic]
 version = { attr = "cosmofy.__version__" }
