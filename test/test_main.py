@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 # pkg
-from cosmofy import main
+from cosmofy.__main__ import main
 
 
 def test_arg_bad() -> None:
@@ -22,7 +22,7 @@ def test_arg_general() -> None:
     assert main(split("cosmofy --debug --help")) == 0, "--help"
 
 
-@patch("cosmofy.Bundler.run")
+@patch("cosmofy.__main__.Bundler.run")
 def test_run(_run: MagicMock) -> None:
     """Run the bundler."""
     assert main(split("cosmofy src/cosmofy --dry-run")) == 0
