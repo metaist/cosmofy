@@ -224,6 +224,7 @@ class Bundler:
         pkgs = ("Lib", "site-packages")
         for path, files in include:
             if path in exclude:
+                log.debug(f"{self.banner}exclude: {path}")
                 continue
             if path.is_dir():
                 if any(True for p in PACKAGE_FILES if p in files):

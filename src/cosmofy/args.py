@@ -78,7 +78,7 @@ FILES
   -x GLOB, --exclude GLOB
     One or more glob-like patterns to exclude from being added.
 
-    By default, "*.egg-info" and "__pycache__" are excluded.
+    Common things to exclude are: "**/*.egg-info/*" and "**/__pycache__/*".
 
   --rm GLOB, --remove GLOB
     One or more glob-like patters to remove from the output.
