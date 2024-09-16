@@ -202,20 +202,26 @@ class Args:
                 setattr(args, prop, True)
 
             # str
-            elif arg in ["--args", "--python-url"]:
+            elif arg in ["--add-updater", "--args", "--python-url"]:
+                if not argv:
+                    raise ValueError(f"Expected argument for option: {arg}")
                 setattr(args, prop, argv.pop(0))
 
             # path
             elif arg in ["--cache", "--output"]:
+                if not argv:
+                    raise ValueError(f"Expected argument for option: {arg}")
                 setattr(args, prop, Path(argv.pop(0)))
 
             # list[str]
             elif arg in ["--add", "--exclude", "--remove"]:
+                if not argv:
+                    raise ValueError(f"Expected argument for option: {arg}")
                 getattr(args, prop).append(argv.pop(0))
 
             # unknown
             else:
-                raise ValueError(f"Unknown argument: {arg}")
+                raise ValueError(f"Unknown option: {arg}")
 
         args.for_real = not args.dry_run
         if args.cache and args.cache.name.lower() in ["0", "false"]:

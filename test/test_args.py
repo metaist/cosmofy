@@ -32,6 +32,16 @@ def test_disable_cache() -> None:
 
 
 def test_bad_arg() -> None:
-    """Bad arg."""
+    """Bad or missing arg."""
     with pytest.raises(ValueError):
         Args.parse(["--unknown"])
+
+    # missing
+    with pytest.raises(ValueError):
+        Args.parse(["--python-url"])
+
+    with pytest.raises(ValueError):
+        Args.parse(["--cache"])
+
+    with pytest.raises(ValueError):
+        Args.parse(["--add"])
