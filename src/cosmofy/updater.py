@@ -73,7 +73,7 @@ def create_receipt(
     date = date or datetime.now()
     if not version:
         out = subprocess.run(
-            f"{path} --version", shell=True, capture_output=True, check=True
+            f"{path.resolve()} --version", shell=True, capture_output=True, check=True
         ).stdout
         if match := RE_VERSION.search(out):
             version = match.group().decode("utf-8")
