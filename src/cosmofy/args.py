@@ -21,6 +21,12 @@ COSMOFY_CACHE_DIR = Path(
 )
 """Path to cache directory."""
 
+RECEIPT_URL = ENV.get("RECEIPT_URL", "")
+"""Default receipt URL."""
+
+RELEASE_URL = ENV.get("RELEASE_URL", "")
+"""Default release URL."""
+
 USAGE = f"""cosmofy: Cosmopolitan Python Bundler
 
 USAGE
@@ -28,9 +34,10 @@ USAGE
   cosmofy
     [--help] [--version] [--debug] [--dry-run] [--self-update]
     [--python-url URL] [--cache PATH] [--clone]
-    [--output PATH] [--receipt]
-    [--args STRING] [--add-updater URL]
+    [--output PATH] [--args STRING]
     <add>... [--exclude GLOB]... [--remove GLOB]...
+    [--receipt PATH] [--receipt-url URL] [--release-url URL]
+    [--release-version STRING]
 
 GENERAL
 
@@ -68,30 +75,16 @@ OUTPUT
 
   -o PATH, --output PATH
     Path to output file.
+    [default: `<main_module>.com`]
 
-    If omitted, it will be `<main_module>.com` where `<main_module>`
-    where `<main_module>` is the first module with a `__main__.py` or file with  checks for `__name__ == "__main__"`.
-
-  --receipt
-    Create a JSON file with the `--output` date, version, and hash. Written
-    to `<output>.json`.
+    `<main_module>` is the first module with a `__main__.py` or file with an
+    `if __name__ == "__main__"` line.
 
 FILES
 
   --args STRING
     Cosmopolitan Python arguments.
-
-    If omitted, it will be `"-m <main_module>"` where `<main_module>` is
-    the the same as the default for `--output`.
-
-  --release-url URL
-    Add `cosmofy.updater` which checks for a `--self-update` option
-    and updates the Cosmopolitan app from `URL` if there is a newer release.
-
-    NOTE: The updater will alter `--args` so that it gets called first.
-    It supports most Python Command Line interface options (like `-m`).
-    For a full list see:
-    https://github.com/metaist/cosmofy#supported-python-cli
+    [default: `"-m <main_module>"`]
 
   --add GLOB, <add>
     At least one glob-like patterns to add. Folders are recursively added.
@@ -108,6 +101,42 @@ FILES
 
     Common things to remove are `pip`, terminal info, and SSL certs:
     $ cosmofy src/my_module --rm 'usr/*' --rm 'Lib/site-packages/pip/*'
+
+SELF-UPDATER
+
+  Specifying any of the options below will add `cosmofy.updater`
+  to make the resulting app capable of updating itself. You
+  must supply at least `--receipt-url` or `--release-url`.
+
+  In addition to building the app, there will be a second output
+  which is a JSON file (called a receipt) that needs to be uploaded
+  together with the app.
+
+  When the app runs, the updater first checks to see if it was called with `--self-update`. If it wasn't, execution continues as normal.
+  If it was, the updater checks the published receipt to see if there is a
+  newer version of the app and downloads it, if appropriate.
+
+  NOTE: The updater will alter `--args` so that it gets called first.
+  It supports most Python Command Line interface options (like `-m`).
+  For a full list see: https://github.com/metaist/cosmofy#supported-python-cli
+
+  --receipt PATH
+    Set the path for the JSON receipt.
+    [default: `<output>.json`]
+
+  --receipt-url URL
+    URL to the published receipt.
+    [default: <release-url>.json]
+    [env: RECEIPT_URL={RECEIPT_URL}]
+
+  --release-url URL
+    URL to the file to download.
+    [default: <receipt-url-without.json>]
+    [env: RELEASE_URL={RELEASE_URL}]
+
+  --release-version STRING
+    Release version.
+    [default: we run `output --version` and save first version-looking string]
 """
 
 
@@ -123,7 +152,7 @@ class Args:
     """Whether to show debug messages."""
 
     cosmo: bool = False
-    """Whether we are running inside a Cosmopolitan build."""
+    """(internal) Whether we are running inside a Cosmopolitan build."""
 
     dry_run: bool = False
     """Whether we should suppress any file-system operations."""
@@ -154,16 +183,10 @@ class Args:
     output: Optional[Path] = None
     """Path to the output file."""
 
-    receipt: bool = False
-    """Whether to create a JSON file with the output date, version, and hash."""
-
     # files
 
     args: str = ""
     """Args to pass to Cosmopolitan python."""
-
-    release_url: str = ""
-    """URL of the latest release."""
 
     add: List[str] = dataclasses.field(default_factory=list)
     """Globs to add."""
@@ -173,6 +196,27 @@ class Args:
 
     remove: List[str] = dataclasses.field(default_factory=list)
     """Globs to remove."""
+
+    # self-updater
+
+    receipt: Optional[Path] = None
+    """Path to the receipt output."""
+
+    receipt_url: str = RECEIPT_URL
+    """URL of latest release receipt."""
+
+    release_url: str = RELEASE_URL
+    """URL of latest release download."""
+
+    release_version: str = ""
+    """Version of the latest release."""
+
+    @property
+    def add_updater(self) -> bool:
+        """Internal property on whether to add the updater."""
+        return bool(
+            self.receipt or self.receipt_url or self.release_url or self.release_version
+        )
 
     @staticmethod
     def parse(argv: List[str]) -> Args:
@@ -199,19 +243,24 @@ class Args:
                 "--debug",
                 "--dry-run",
                 "--help",
-                "--receipt",
                 "--version",
             ]:
                 setattr(args, prop, True)
 
             # str
-            elif arg in ["--args", "--python-url", "--release-url"]:
+            elif arg in [
+                "--args",
+                "--python-url",
+                "--receipt-url",
+                "--release-url",
+                "--release-version",
+            ]:
                 if not argv:
                     raise ValueError(f"Expected argument for option: {arg}")
                 setattr(args, prop, argv.pop(0))
 
             # path
-            elif arg in ["--cache", "--output"]:
+            elif arg in ["--cache", "--output", "--receipt"]:
                 if not argv:
                     raise ValueError(f"Expected argument for option: {arg}")
                 setattr(args, prop, Path(argv.pop(0)))
@@ -226,7 +275,15 @@ class Args:
             else:
                 raise ValueError(f"Unknown option: {arg}")
 
-        args.for_real = not args.dry_run
+        # cache
         if args.cache and args.cache.name.lower() in ["0", "false"]:
             args.cache = None
+
+        # self-updater
+        if args.add_updater and not args.receipt_url and not args.release_url:
+            raise ValueError("--receipt-url or --release-url required for updater")
+        if not args.receipt_url and args.release_url:
+            args.receipt_url = args.release_url + ".json"
+        elif not args.release_url and args.receipt_url:
+            args.release_url = args.receipt_url.replace(".json", "")
         return args
