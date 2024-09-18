@@ -12,7 +12,6 @@ import pytest
 from cosmofy import pythonoid
 from cosmofy.pythonoid import PythonArgs
 from cosmofy.pythonoid import run_python
-from cosmofy.updater import main
 
 
 def test_main_detector() -> None:
@@ -102,12 +101,3 @@ def test_run() -> None:
 
         assert run_python(split("-ic f=42")) == 0
         assert _interact.called
-
-
-def test_main() -> None:
-    """Argument interceptor."""
-    assert main(split("-V")) == 0  # runs python --version
-
-    with patch("cosmofy.updater.self_update") as _self_update:
-        _self_update.return_value = 0
-        assert main(split("-m other-module --option --self-update")) == 0

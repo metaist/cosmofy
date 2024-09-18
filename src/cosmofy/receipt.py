@@ -15,6 +15,9 @@ import json
 import re
 import subprocess
 
+Checker = Callable[[str], bool]
+"""Function that takes a `str` and returns a `bool` if it is ok."""
+
 RECEIPT_SCHEMA = (
     "https://raw.githubusercontent.com/metaist/cosmofy/0.1.0/cosmofy.schema.json"
 )
@@ -37,9 +40,6 @@ DEFAULT_HASH = "sha256"
 
 RE_VERSION = re.compile(rb"\d+\.\d+\.\d+(-[\da-zA-Z-.]+)?(\+[\da-zA-Z-.]+)?")
 """Regex for a semver-like version string."""
-
-Checker = Callable[[str], bool]
-"""Function that takes a `str` and returns a `bool` if it is ok."""
 
 
 def datestr(date: datetime) -> str:

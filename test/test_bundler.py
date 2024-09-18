@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Iterator
 from typing import Set
 from typing import Tuple
-from unittest.mock import MagicMock
 from unittest.mock import patch
+from unittest.mock import MagicMock
 from zipfile import ZipInfo
 import io
 import os
@@ -238,11 +238,9 @@ def test_write_args() -> None:
     assert test.write_args(archive, tuple())  # skip writing
     assert test.write_args(archive, ("foo", "__init__"))
 
-    # NOTE: This test messes up things in a way I don't understand.
-    # with patch("cosmofy.bundler.Bundler.add_updater"):
-    #     test2 = Bundler(Args(dry_run=True, release_url="https://example.com"))
-    #     archive2 = _archive(io.BytesIO())
-    #     assert test2.write_args(archive2, ("foo", "__init__"))
+    test.args.receipt_url = "https://example.com/foo.json"
+    test.args.release_url = "https://example.com/foo"
+    assert test.write_args(archive, ("foo", "__init__"))
 
     real = Bundler(Args(args="-m foo.bar --extra"))
     assert real.write_args(archive, ("foo", "bar"))
@@ -280,8 +278,9 @@ def test_write_receipt(_from_path: MagicMock) -> None:
 
 def test_run() -> None:
     """Run bundler."""
+    path = Path("out.com")
     test = Bundler(Args(dry_run=True))
-    assert test.run() == Path("out.com")
+    assert test.run() == path
 
     test2 = Bundler(
         Args(
@@ -290,7 +289,6 @@ def test_run() -> None:
             receipt_url="https://example.com/foo.json",
         )
     )
-
-    with patch("cosmofy.bundler.Bundler.write_receipt") as _write:
-        _write.return_value = Receipt()
-        assert test2.run() == Path("out.com")
+    with patch("cosmofy.bundler.Bundler.write_receipt") as _receipt:
+        _receipt.return_value = Receipt()
+        assert test2.run() == path

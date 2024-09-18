@@ -275,6 +275,7 @@ class Bundler:
         output = self.args.output or Path(f"{main[-1]}.com")
         if archive.filename:
             self.fs_move_executable(Path(archive.filename), output)
+        log.info(f"{self.banner}created: {output}")
         return output
 
     def write_receipt(self, bundle: Path, receipt: Receipt) -> Receipt:
@@ -305,11 +306,9 @@ class Bundler:
         main = self.zip_add(archive, include, exclude)
         self.zip_remove(archive, *self.args.remove)
         receipt = self.write_args(archive, main)
-
         archive.close()  # release the file
-        output = self.write_output(archive, main)
-        log.info(f"{self.banner}bundled: {output}")
 
+        output = self.write_output(archive, main)
         if self.args.add_updater:  # published receipt
             receipt = self.write_receipt(output, receipt)
         return output
