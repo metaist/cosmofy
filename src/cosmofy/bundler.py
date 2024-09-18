@@ -224,23 +224,26 @@ class Bundler:
         if self.args.for_real:
             archive.add_file(dest, data, 0o644)
 
-        dest = "Lib/site-packages/cosmofy/updater.pyc"
-        if archive.NameToInfo.get(dest):  # already done
-            log.debug(f"{self.banner}already exists: {dest}")
-            return python_args
+        folder = "Lib/site-packages/cosmofy/"
+        files = ["downloader.py", "pythonoid.py", "receipt.py", "updater.py"]
+        for file in files:
+            dest = folder + file + "c"
+            if archive.NameToInfo.get(dest):  # already done
+                log.debug(f"{self.banner}already exists: {dest}")
+                continue
 
-        if self.args.cosmo:  # clone from self
-            log.debug(f"{self.banner}clone from: {sys.executable}")
-            bundle = ZipFile2(sys.executable, "r")
-            data = bundle.read(dest)
-        else:
-            path = Path(__file__).parent / "updater.py"
-            log.debug(f"{self.banner}compile from: {path}")
-            data = compile_python(path)
+            if self.args.cosmo:  # clone from self
+                log.debug(f"{self.banner}clone from: {sys.executable}")
+                bundle = ZipFile2(sys.executable, "r")
+                data = bundle.read(dest)
+            else:
+                path = Path(__file__).parent / file
+                log.debug(f"{self.banner}compile from: {path}")
+                data = compile_python(path)
 
-        log.info(f"{self.banner}add: {dest}")
-        if self.args.for_real:
-            archive.add_file(dest, data, 0o644)
+            log.info(f"{self.banner}add: {dest}")
+            if self.args.for_real:
+                archive.add_file(dest, data, 0o644)
 
         return python_args
 
