@@ -191,7 +191,7 @@ class Receipt:
         """Update this receipt with several values."""
         for name, value in values.items():
             if name == "date":
-                self.date = datetime.fromisoformat(value)
+                self.date = datetime.fromisoformat(value.replace("Z", "+00:00"))
             else:
                 setattr(self, name, value)
         return self
@@ -211,7 +211,7 @@ class Receipt:
 
         _data = {**data}  # copy to prevent modification
         schema = _data.pop("$schema")
-        date = datetime.fromisoformat(_data.pop("date"))
+        date = datetime.fromisoformat(_data.pop("date").replace("Z", "+00:00"))
         kind: RECEIPT_KIND = (  # mypy can't detect this properly
             "published" if _data.pop("kind") == "published" else "embedded"
         )
