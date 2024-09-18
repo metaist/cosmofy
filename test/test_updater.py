@@ -1,133 +1,73 @@
 """Updater."""
 
 # std
-from datetime import datetime
-from datetime import timezone
 from pathlib import Path
+from shlex import split
 from unittest.mock import MagicMock
 from unittest.mock import patch
-import sys
+from datetime import datetime
+from datetime import timezone
 
 # pkg
 from cosmofy import updater
 
 
-@patch("cosmofy.updater.urlopen")
-@patch("cosmofy.updater.Path.open")
-@patch("cosmofy.updater.Path.mkdir")
-def test_download(_mkdir: MagicMock, _open: MagicMock, _urlopen: MagicMock) -> None:
-    """Download url."""
-    # read url
-    _response = MagicMock()
-    _response.read.side_effect = [b"chunk1", b"chunk2", b""]
-    _urlopen.return_value.__enter__.return_value = _response
-
-    # open file
-    _output = MagicMock()
-    _open.return_value.__enter__.return_value = _output
-
-    # test
-    url = "http://example.com"
-    path = Path("fake")
-    result = updater.download(url, path)
-
-    _urlopen.assert_called_once_with(url)
-    _mkdir.assert_called_once_with(parents=True, exist_ok=True)
-    _output.write.assert_any_call(b"chunk1")
-    _output.write.assert_any_call(b"chunk2")
-    assert result == path
-
-
-@patch("cosmofy.updater.Path.exists")
-@patch("cosmofy.updater.download")
-def test_download_if_not_exists(_download: MagicMock, _exists: MagicMock) -> None:
-    """Call download when there's no file."""
-    # local
-    _exists.return_value = False  # file does not exist
-
-    # test
-    url = "http://example.com"
-    path = Path("fake")
-    updater.download_if_newer(url, path)
-
-    _download.assert_called()
-
-
-@patch("cosmofy.updater.Path.exists")
-@patch("cosmofy.updater.Path.stat")
-@patch("cosmofy.updater.urlopen")
-@patch("cosmofy.updater.parsedate_to_datetime")
-@patch("cosmofy.updater.download")
-def test_download_if_newer(
-    _download: MagicMock,
-    _parsedate: MagicMock,
-    _urlopen: MagicMock,
-    _stat: MagicMock,
-    _exists: MagicMock,
+@patch("cosmofy.updater.zipfile.ZipFile")
+@patch("cosmofy.updater.Receipt.from_dict")
+@patch("cosmofy.updater.download_receipt")
+@patch("cosmofy.updater.download_release")
+def test_updater(
+    _release: MagicMock, _receipt: MagicMock, _from_dict: MagicMock, _ZipFile: MagicMock
 ) -> None:
-    """Call download if there's a newer version."""
-    # local
-    _exists.return_value = True  # File exists
-    _stat.return_value.st_mtime = datetime(2023, 9, 1, tzinfo=timezone.utc).timestamp()
-    _stat.return_value.st_mode = 33204  # for Path.open
+    """Self-updater."""
+    path = Path("/tmp/fake")
+    _ZipFile.return_value.__enter__.return_value.read.return_value = "{}"
+    _from_dict.return_value = updater.Receipt(
+        date=datetime(2000, 1, 1, tzinfo=timezone.utc),
+        receipt_url="https://example.com/fake.json",
+    )
+    _receipt.return_value = updater.Receipt(
+        kind="published",
+        date=datetime(2000, 1, 1, tzinfo=timezone.utc),
+        receipt_url="https://example.com/fake.json",
+    )
 
-    # remote
-    _response = MagicMock()
-    _response.headers.get.return_value = "Wed, 02 Sep 2023 00:00:00 GMT"
-    _response.read.side_effect = [b"chunk1", b"chunk2", b""]
-    _urlopen.return_value.__enter__.return_value = _response
-    _parsedate.return_value = datetime(2023, 9, 2, tzinfo=timezone.utc)
+    # nothing new
+    assert updater.self_update(path) == 0
 
-    # test
-    url = "http://example.com"
-    path = Path("fake")
-    updater.download_if_newer(url, path)
+    # newer
+    _receipt.return_value = updater.Receipt(
+        kind="published", date=datetime(2000, 1, 2, tzinfo=timezone.utc)
+    )
+    _release.return_value = path
+    assert updater.self_update(path) == 0
 
-    assert _urlopen.called
-    assert _download.called
+    # error getting receipt
+    _receipt.return_value = None
+    assert updater.self_update(path) == 1
 
-
-@patch("cosmofy.updater.Path.exists")
-@patch("cosmofy.updater.Path.stat")
-@patch("cosmofy.updater.urlopen")
-@patch("cosmofy.updater.parsedate_to_datetime")
-@patch("cosmofy.updater.download")
-def test_download_if_not_newer(
-    _download: MagicMock,
-    _parsedate: MagicMock,
-    _urlopen: MagicMock,
-    _stat: MagicMock,
-    _exists: MagicMock,
-) -> None:
-    # local
-    _exists.return_value = True  # File exists
-    _stat.return_value.st_mtime = datetime(2023, 9, 2, tzinfo=timezone.utc).timestamp()
-
-    # remote
-    _response = MagicMock()
-    _response.headers.get.return_value = "Wed, 01 Sep 2023 00:00:00 GMT"
-    _urlopen.return_value.__enter__.return_value = _response
-    _parsedate.return_value = datetime(2023, 9, 1, tzinfo=timezone.utc)
-
-    # test
-    url = "http://example.com"
-    path = Path("path")
-    result = updater.download_if_newer(url, path)
-
-    _urlopen.assert_called_once()
-    _download.assert_not_called()
-    assert result == path
+    # error getting release
+    _receipt.return_value = updater.Receipt(
+        kind="published", date=datetime(2000, 1, 2, tzinfo=timezone.utc)
+    )
+    _release.return_value = None
+    assert updater.self_update(path) == 1
 
 
-def test_receipt() -> None:
-    """Generate a receipt."""
-    path = Path(sys.executable)
-    data = updater.create_receipt(path, version="1.0.0")
-    assert isinstance(data, dict)
+@patch("cosmofy.updater.self_update")
+@patch("cosmofy.updater.run_python")
+def test_main(_run_python: MagicMock, _self_update: MagicMock) -> None:
+    """Main entry point."""
+    _self_update.return_value = 0
+    _run_python.return_value = 0
 
-    data = updater.create_receipt(path)
-    assert isinstance(data, dict)
+    assert updater.main([]) == 0
+    _run_python.assert_called_with([])
 
-    path = Path(__file__).parent.parent / "examples" / "single-file" / "file-no-main.py"
-    data = updater.create_receipt(path)
-    assert isinstance(data, dict)
+    assert updater.main(split("--self-update")) == 0
+    _self_update.assert_called()
+
+    assert updater.main(split("--self-update --help")) == 0
+    assert updater.main(split("-h --self-update")) == 0
+    assert updater.main(split("--self-update --version")) == 0
+    assert updater.main(split("--self-update --debug")) == 0
