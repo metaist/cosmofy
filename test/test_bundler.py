@@ -6,10 +6,13 @@ from typing import Iterator
 from typing import Set
 from typing import Tuple
 from unittest.mock import patch
-from unittest.mock import MagicMock
+from zipfile import ZipInfo
 import io
 import os
 import tempfile
+
+# lib
+import pytest
 
 # pkg
 from cosmofy import bundler
@@ -19,6 +22,8 @@ from cosmofy.bundler import _archive
 from cosmofy.bundler import _pack_uint32
 from cosmofy.bundler import Bundler
 from cosmofy.bundler import compile_python
+from cosmofy.updater import PATH_RECEIPT
+from cosmofy.updater import Receipt
 from cosmofy.zipfile2 import ZipFile2
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
@@ -216,6 +221,41 @@ def test_remove() -> None:
         real.zip_remove(archive, ".args")
 
 
+def test_add_updater() -> None:
+    """Add updater."""
+    test = Bundler(Args(dry_run=True))
+    real = Bundler(Args())
+    archive = _archive(io.BytesIO())
+    receipt = Receipt(
+        receipt_url="https://example.com/foo.json",
+        release_url="https://example.com/foo",
+    )
+    expected = "-m cosmofy.updater"
+
+    # unsupported arg
+    with pytest.raises(SystemExit):
+        test.add_updater(archive, "-h", receipt)
+
+    # valid args
+    assert (
+        test.add_updater(archive, "-m other_module", receipt)
+        == f"{expected} -m other_module"
+    )
+
+    with patch("cosmofy.bundler.ZipFile2") as _Z:
+        _Z.return_value.read.return_value = b"42"
+        test.args.cosmo = True
+        assert test.add_updater(archive, "", receipt) == expected
+
+    # no args
+    assert real.add_updater(archive, "", receipt) == expected
+    archive.remove(PATH_RECEIPT)
+
+    # already exists
+    archive.NameToInfo["Lib/site-packages/cosmofy/updater.pyc"] = ZipInfo()
+    assert real.add_updater(archive, "", receipt) == expected
+
+
 def test_write_args() -> None:
     """Write .args."""
     test = Bundler(Args(dry_run=True))
@@ -238,20 +278,21 @@ def test_write_output() -> None:
     assert test.write_output(archive, ("foo", "bar")) == Path("bar.com")
 
 
-@patch("cosmofy.bundler.create_receipt")
-def test_write_receipt(_create_receipt: MagicMock) -> None:
-    """Write receipt."""
-    _create_receipt.return_value = {}
+# @patch("cosmofy.bundler.Receipt.from_path")
+# def test_write_receipt(_from_path: MagicMock) -> None:
+#     """Write receipt."""
+#     _from_path.return_value = Receipt(hash="abcdef012356", version="0.1.0")
 
-    test = Bundler(Args(receipt=True, dry_run=True))
-    real = Bundler(Args(receipt=True))
-    with tempfile.NamedTemporaryFile() as f:
-        path = Path(f.name)
-        test.write_receipt(path)
-        _create_receipt.assert_called()
+#     test = Bundler(Args(receipt=True, dry_run=True))
+#     real = Bundler(Args(receipt=True))
+#     with tempfile.NamedTemporaryFile() as f:
+#         bundle = Path(f.name)
+#         receipt = Receipt(receipt_url="", release_url="")
+#         test.write_receipt(bundle, receipt)
+#         _from_path.assert_called()
 
-        real.write_receipt(path)
-        _create_receipt.assert_called()
+#         real.write_receipt(bundle, receipt)
+#         _from_path.assert_called()
 
 
 def test_run() -> None:

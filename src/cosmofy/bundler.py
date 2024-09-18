@@ -12,13 +12,12 @@ from typing import Set
 from typing import Tuple
 from typing import Union
 import io
-import json
 import logging
 import marshal
 import os
 import re
+import shlex
 import shutil
-import stat
 import sys
 import tempfile
 import zipfile
@@ -26,10 +25,12 @@ import zipfile
 # pkg
 from .args import Args
 from .args import COSMOFY_PYTHON_URL
-from .updater import create_receipt
 from .updater import download
 from .updater import download_if_newer
+from .updater import move_executable
+from .updater import PATH_RECEIPT
 from .updater import PythonArgs
+from .updater import Receipt
 from .zipfile2 import ZipFile2
 
 log = logging.getLogger(__name__)
@@ -146,13 +147,9 @@ class Bundler:
 
     def fs_move_executable(self, src: Path, dest: Path) -> Path:
         """Move a file and set its executable bit."""
-        log.debug(f"{self.banner}move and chmod +x: {src} to {dest}")
+        log.debug(f"{self.banner}move executable: {src} to {dest}")
         if self.args.for_real:
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            # TODO 2024-10-31 @ py3.8 EOL: use `Path` instead of `str`
-            shutil.move(str(src), str(dest))
-            mode = dest.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-            dest.chmod(mode)
+            move_executable(src, dest)
         return dest
 
     def from_cache(
@@ -257,18 +254,24 @@ class Bundler:
                 archive.remove(pattern)
         return archive
 
-    def add_updater(self, archive: ZipFile2, python_args: str) -> str:
-        """Add `cosmofy.updater` to `archive`."""
-        update_url = self.args.release_url
-        if not update_url:
-            return python_args
-
+    def add_updater(self, archive: ZipFile2, python_args: str, receipt: Receipt) -> str:
+        """Add `cosmofy.updater` and `receipt` to `archive`."""
         try:
             PythonArgs.parse(split(python_args))  # we can handle these args
-            python_args = f"-m cosmofy.updater '{update_url}' {python_args}"
+            python_args = f"-m cosmofy.updater {python_args}".strip()
         except ValueError as e:
             log.error(f"Cannot add updater: {e}")
             sys.exit(1)
+
+        assert receipt.is_valid()
+        data: Union[str, bytes, bytearray]
+
+        dest = PATH_RECEIPT
+        data = str(receipt)
+        log.debug(f"{self.banner} local receipt: {data}")
+        log.info(f"{self.banner}add: {dest}")
+        if self.args.for_real:
+            archive.add_file(dest, data, 0o644)
 
         dest = "Lib/site-packages/cosmofy/updater.pyc"
         if archive.NameToInfo.get(dest):  # already done
@@ -290,15 +293,23 @@ class Bundler:
 
         return python_args
 
-    def write_args(self, archive: ZipFile2, main: Pkg) -> ZipFile2:
+    def write_args(self, archive: ZipFile2, main: Pkg) -> Receipt:
         """Write special .args file."""
+        receipt = Receipt(
+            receipt_url=self.args.receipt_url,
+            release_url=self.args.release_url,
+        )
+        python_args = ""
         if self.args.args or main:
             python_args = self.args.args or f"-m {'.'.join(main)}"
-            python_args = self.add_updater(archive, python_args)
+        if self.args.add_updater:  # embedded receipt
+            python_args = self.add_updater(archive, python_args, receipt)
+
+        if python_args:
             log.debug(f"{self.banner}.args = {python_args}")
             if self.args.for_real:
-                archive.add_file(".args", python_args.replace(" ", "\n"), 0o644)
-        return archive
+                archive.add_file(".args", "\n".join(shlex.split(python_args)), 0o644)
+        return receipt
 
     def write_output(self, archive: ZipFile2, main: Pkg) -> Path:
         """Move output to appropriate place."""
@@ -312,18 +323,25 @@ class Bundler:
             self.fs_move_executable(Path(archive.filename), output)
         return output
 
-    def write_receipt(self, path: Path) -> Bundler:
-        """Write a JSON receipt for the bundle."""
-        if not self.args.receipt:
-            return self
+    def write_receipt(self, bundle: Path, receipt: Receipt) -> Receipt:
+        """Write published receipt."""
+        receipt.update_from(
+            Receipt.from_path(bundle, self.args.release_version),
+            "algo",
+            "hash",
+            "version",
+            kind="published",
+        )
+        assert receipt.is_valid()
 
-        output = path.with_suffix(f"{path.suffix}.json")
-        receipt = json.dumps(create_receipt(path))
-        log.debug(f"{self.banner} receipt: {receipt}")
+        data = str(receipt)
+        log.debug(f"{self.banner} remote receipt: {data}")
+
+        output = self.args.receipt or bundle.with_suffix(f"{bundle.suffix}.json")
+        log.info(f"{self.banner}write: {output}")
         if self.args.for_real:
-            output.write_text(receipt)
-        log.info(f"{self.banner}wrote JSON receipt: {output}")
-        return self
+            output.write_text(data)
+        return receipt
 
     def run(self) -> Path:
         """Run the bundler."""
@@ -332,10 +350,12 @@ class Bundler:
         exclude = set(p[0] for p in expand_globs(Path.cwd(), *self.args.exclude))
         main = self.zip_add(archive, include, exclude)
         self.zip_remove(archive, *self.args.remove)
-        self.write_args(archive, main)
-        archive.close()
+        receipt = self.write_args(archive, main)
 
+        archive.close()  # release the file
         output = self.write_output(archive, main)
         log.info(f"{self.banner}bundled: {output}")
-        self.write_receipt(output)
+
+        if self.args.add_updater:  # published receipt
+            receipt = self.write_receipt(output, receipt)
         return output
