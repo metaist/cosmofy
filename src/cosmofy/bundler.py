@@ -21,17 +21,18 @@ import zipfile
 
 # pkg
 from .args import Args
+from .downloader import download
+from .downloader import download_if_newer
+from .downloader import move_executable
 from .pythonoid import compile_python
 from .pythonoid import MAIN_FILES
 from .pythonoid import PACKAGE_FILES
 from .pythonoid import Pkg
 from .pythonoid import PythonArgs
 from .pythonoid import RE_MAIN
-from .updater import download
-from .updater import download_if_newer
-from .updater import move_executable
+from .receipt import Receipt
+from .updater import PATH_COSMOFY
 from .updater import PATH_RECEIPT
-from .updater import Receipt
 from .zipfile2 import ZipFile2
 
 log = logging.getLogger(__name__)
@@ -135,7 +136,7 @@ class Bundler:
         """Clone, copy from cache, or download the archive."""
         temp, archive = self.setup_temp()
         if self.args.clone:
-            paths = [".args", "Lib/site-packages/cosmofy/*"]
+            paths = [".args", f"{PATH_COSMOFY}/*"]
             self.fs_copy(Path(sys.executable), temp)
             archive = self.zip_remove(archive or _archive(temp), *paths)
         elif self.args.cache:
@@ -224,10 +225,9 @@ class Bundler:
         if self.args.for_real:
             archive.add_file(dest, data, 0o644)
 
-        folder = "Lib/site-packages/cosmofy/"
         files = ["downloader.py", "pythonoid.py", "receipt.py", "updater.py"]
         for file in files:
-            dest = folder + file + "c"
+            dest = f"{PATH_COSMOFY}/{file}c"
             if archive.NameToInfo.get(dest):  # already done
                 log.debug(f"{self.banner}already exists: {dest}")
                 continue

@@ -11,8 +11,8 @@ import pytest
 # pkg
 from cosmofy import pythonoid
 from cosmofy.pythonoid import PythonArgs
+from cosmofy.pythonoid import run_python
 from cosmofy.updater import main
-from cosmofy.updater import run_python
 
 
 def test_main_detector() -> None:

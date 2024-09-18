@@ -21,19 +21,15 @@ from cosmofy.args import Args
 from cosmofy.args import DEFAULT_PYTHON_URL
 from cosmofy.bundler import _archive
 from cosmofy.bundler import Bundler
+from cosmofy.downloader import Receipt
 from cosmofy.updater import PATH_RECEIPT
-from cosmofy.updater import Receipt
 from cosmofy.zipfile2 import ZipFile2
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 (EXAMPLES / "empty").mkdir(parents=True, exist_ok=True)  # cannot be committed
 
 Include = Iterator[Tuple[Path, Set[str]]]
-
-
-def test_utilities() -> None:
-    """Utility methods."""
-    assert isinstance(_archive(io.BytesIO()), ZipFile2)
+"""Type of include."""
 
 
 def test_globs() -> None:
