@@ -172,6 +172,7 @@ following [Python Command Line Interface options](https://docs.python.org/3/usin
 - `-`: read a command from `stdin` (rare, but we support it)
 - `<script>`: run a script on the filesystem
 - `-V, --version`: display the Python version (we also support `-VV`)
+- `-h, -?, --help`: show relevant portions of the help message
 - `-i`: enter python REPL after executing a script (`-c`, `-m`, `-`, or `<script>`)
 - `-q`: don't display copyright and version messages in interactive mode
 
