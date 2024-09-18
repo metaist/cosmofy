@@ -1,5 +1,34 @@
 #!/usr/bin/env python
-"""Self-updater."""
+"""Cosmofy self-updater.
+
+This program is bundled into Cosmopolitan Python apps
+to give them the ability to update themselves.
+See: https://github.com/metaist/cosmofy
+
+Usage: {program} --self-update [--help] [--version] [--debug]
+
+Options:
+
+  --self-update
+    Indicates that this self-updater should run instead of the usual
+    program.
+
+  -h, --help
+   Show this message and exit.
+
+  --debug
+    Show debug messages.
+
+Environment:
+
+  RECEIPT_URL={RECEIPT_URL}
+    If set, this URL will override the built-in URL for downloading
+    update metadata.
+
+  RELEASE_URL={RELEASE_URL}
+    If set, this URL will override the published URL for downloading
+    the update.
+"""
 
 # std
 from __future__ import annotations
@@ -392,6 +421,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = argv or sys.argv[1:]
     if "--self-update" in args:
         if "-h" in args or "--help" in args:
+            assert __doc__
             doc = __doc__.format(
                 program=Path(sys.executable).name,
                 RECEIPT_URL=ENV.get("RECEIPT_URL", ""),
