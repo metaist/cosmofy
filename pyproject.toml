@@ -165,5 +165,8 @@ release.shell = """
   git push --tags;
   git checkout main;
   git merge --no-ff --no-edit prod;
-  git push
+  git push;
+
+  awk 'BEGIN {count=0} /---/ {count++} count==2 && !/---/ {print} count==3 {exit}' \
+  CHANGELOG.md | gh release create $1 dist/* --draft --verify-tag --title $1 --notes-file -
 """
