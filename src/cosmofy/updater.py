@@ -23,6 +23,8 @@ import runpy
 import subprocess
 import sys
 import traceback
+__version__ = "0.1.0"
+__pubdate__ = "unpublished"
 
 log = logging.getLogger(__name__)
 
@@ -388,9 +390,21 @@ def run_python(argv: List[str]) -> int:
 def main(argv: Optional[List[str]] = None) -> int:
     """Main entry point for self-updater."""
     args = argv or sys.argv[1:]
-    url = args.pop(0)
     if "--self-update" in args:
-        return self_update(url, Path(sys.executable))
+        if "-h" in args or "--help" in args:
+            doc = __doc__.format(
+                program=Path(sys.executable).name,
+                RECEIPT_URL=ENV.get("RECEIPT_URL", ""),
+                RELEASE_URL=ENV.get("RELEASE_URL", ""),
+            )
+            print(doc)
+            return 0
+        if "--version" in args:
+            print(f"cosmofy.updater {__version__} ({__pubdate__})")
+            return 0
+        level = logging.DEBUG if "--debug" in args else logging.INFO
+        logging.basicConfig(level=level, format=log_normal)
+        return self_update(Path(sys.executable))
     return run_python(args)
 
 
