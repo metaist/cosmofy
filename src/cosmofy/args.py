@@ -14,13 +14,13 @@ log = logging.getLogger(__name__)
 DEFAULT_PYTHON_URL = "https://cosmo.zip/pub/cosmos/bin/python"
 """Default URL to download python from."""
 
-COSMOFY_PYTHON_URL = ENV.get("COSMOFY_PYTHON_URL")
+COSMOFY_PYTHON_URL = ENV.get("COSMOFY_PYTHON_URL", "")
 """URL to download python from."""
 
 DEFAULT_CACHE_DIR = Path.home() / ".cache" / "cosmofy"
 """Default cache directory."""
 
-COSMOFY_CACHE_DIR = ENV.get("COSMOFY_CACHE_DIR")
+COSMOFY_CACHE_DIR = ENV.get("COSMOFY_CACHE_DIR", "")
 """Path to cache directory."""
 
 RECEIPT_URL = ENV.get("RECEIPT_URL", "")
@@ -107,7 +107,8 @@ SELF-UPDATER
   which is a JSON file (called a receipt) that needs to be uploaded
   together with the app.
 
-  When the app runs, the updater first checks to see if it was called with `--self-update`. If it wasn't, execution continues as normal.
+  When the app runs, the updater first checks to see if it was called with
+  `--self-update`. If it wasn't, execution continues as normal.
   If it was, the updater checks the published receipt to see if there is a
   newer version of the app and downloads it, if appropriate.
 

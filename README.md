@@ -42,8 +42,7 @@ cosmofy src/cosmofy \
 
 <!--[[[cog
 from cosmofy.args import USAGE
-doc = USAGE.replace('COSMOFY_CACHE_DIR=/home/lev/.cache/cosmofy', 'COSMOFY_CACHE_DIR=~/.cache/cosmofy')
-cog.outl(f"\n```text\n{doc}```\n")
+cog.outl(f"\n```text\n{USAGE}```\n")
 ]]]-->
 
 ```text
@@ -72,13 +71,13 @@ CACHE
   --python-url URL
     URL from which to download Cosmopolitan Python.
     [default: https://cosmo.zip/pub/cosmos/bin/python]
-    [env: COSMOFY_PYTHON_URL=None]
+    [env: COSMOFY_PYTHON_URL=]
 
   --cache PATH
     Directory in which to cache Cosmopolitan Python downloads.
     Use `false` or `0` to disable caching.
     [default: ~/.cache/cosmofy]
-    [env: COSMOFY_CACHE_DIR=None]
+    [env: COSMOFY_CACHE_DIR=]
 
   --clone
     Obtain python by cloning `cosmofy` and removing itself instead of
@@ -125,7 +124,8 @@ SELF-UPDATER
   which is a JSON file (called a receipt) that needs to be uploaded
   together with the app.
 
-  When the app runs, the updater first checks to see if it was called with `--self-update`. If it wasn't, execution continues as normal.
+  When the app runs, the updater first checks to see if it was called with
+  `--self-update`. If it wasn't, execution continues as normal.
   If it was, the updater checks the published receipt to see if there is a
   newer version of the app and downloads it, if appropriate.
 
