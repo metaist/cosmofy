@@ -5,8 +5,6 @@ from pathlib import Path
 from shlex import split
 from unittest.mock import MagicMock
 from unittest.mock import patch
-from datetime import datetime
-from datetime import timezone
 
 # pkg
 from cosmofy import updater
@@ -23,12 +21,12 @@ def test_updater(
     path = Path("/tmp/fake")
     _ZipFile.return_value.__enter__.return_value.read.return_value = "{}"
     _from_dict.return_value = updater.Receipt(
-        date=datetime(2000, 1, 1, tzinfo=timezone.utc),
+        date="2000-01-01T00:00:00Z",
         receipt_url="https://example.com/fake.json",
     )
     _receipt.return_value = updater.Receipt(
         kind="published",
-        date=datetime(2000, 1, 1, tzinfo=timezone.utc),
+        date="2000-01-01T00:00:00Z",
         receipt_url="https://example.com/fake.json",
     )
 
@@ -37,7 +35,7 @@ def test_updater(
 
     # newer
     _receipt.return_value = updater.Receipt(
-        kind="published", date=datetime(2000, 1, 2, tzinfo=timezone.utc)
+        kind="published", date="2000-01-02T00:00:00Z"
     )
     _release.return_value = path
     assert updater.self_update(path) == 0
@@ -48,7 +46,7 @@ def test_updater(
 
     # error getting release
     _receipt.return_value = updater.Receipt(
-        kind="published", date=datetime(2000, 1, 2, tzinfo=timezone.utc)
+        kind="published", date="2000-01-02T00:00:00Z"
     )
     _release.return_value = None
     assert updater.self_update(path) == 1

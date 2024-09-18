@@ -7,9 +7,7 @@ from datetime import timezone
 from pathlib import Path
 from typing import Callable
 from typing import Dict
-from typing import get_args
 from typing import List
-from typing import Literal
 from urllib.request import urlopen
 import dataclasses
 import hashlib
@@ -17,21 +15,12 @@ import json
 import re
 import subprocess
 
-
-now = datetime.now(tz=timezone.utc)
-
-Checker = Callable[[str], bool]
-"""Function that takes a `str` and returns a `bool` if it is ok."""
-
-RE_VERSION = re.compile(rb"\d+\.\d+\.\d+(-[\da-zA-Z-.]+)?(\+[\da-zA-Z-.]+)?")
-"""Regex for a semver-like version string."""
-
 RECEIPT_SCHEMA = (
     "https://raw.githubusercontent.com/metaist/cosmofy/0.1.0/cosmofy.schema.json"
 )
 """URI of Cosmofy Receipt Schema."""
 
-RECEIPT_KIND = Literal["embedded", "published"]
+RECEIPT_KIND = ("embedded", "published")
 """Valid values for `Receipt.kind`."""
 
 RECEIPT_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
@@ -46,6 +35,21 @@ RECEIPT_HASH = re.compile(r"^[a-f0-9]+$")
 DEFAULT_HASH = "sha256"
 """Default hashing algorithm."""
 
+RE_VERSION = re.compile(rb"\d+\.\d+\.\d+(-[\da-zA-Z-.]+)?(\+[\da-zA-Z-.]+)?")
+"""Regex for a semver-like version string."""
+
+Checker = Callable[[str], bool]
+"""Function that takes a `str` and returns a `bool` if it is ok."""
+
+
+def datestr(date: datetime) -> str:
+    """Return an ISO-8601 formatted date string.
+
+    >>> datestr(datetime(2000, 1, 1, tzinfo=timezone.utc))
+    '2000-01-01T00:00:00Z'
+    """
+    return date.astimezone(timezone.utc).isoformat()[:19] + "Z"
+
 
 @dataclasses.dataclass
 class Receipt:
@@ -54,10 +58,10 @@ class Receipt:
     schema: str = RECEIPT_SCHEMA
     """Receipt schema."""
 
-    kind: RECEIPT_KIND = get_args(RECEIPT_KIND)[0]
+    kind: str = RECEIPT_KIND[0]
     """Whether this receipt is full (published) or partial (embedded)."""
 
-    date: datetime = dataclasses.field(default=now)
+    date: str = datestr(datetime.now())
     """UTC date/time of this receipt."""
 
     algo: str = DEFAULT_HASH
@@ -76,7 +80,7 @@ class Receipt:
     """Asset version."""
 
     def is_newer(self, other: Receipt) -> bool:
-        """Return `True` if this receipt is not newer `other`."""
+        """Return `True` if this receipt is newer than `other`."""
         return self.date > other.date
 
     def __str__(self) -> str:
@@ -88,7 +92,7 @@ class Receipt:
         return {
             "$schema": self.schema,
             "kind": self.kind,
-            "date": self.date.isoformat()[:19] + "Z",
+            "date": self.date,
             "algo": self.algo,
             "hash": self.hash,  # maybe empty
             "receipt_url": self.receipt_url,
@@ -107,7 +111,7 @@ class Receipt:
         issues: Dict[str, List[str]] = {"missing": [], "unknown": [], "malformed": []}
         rules: Dict[str, Checker] = {
             "$schema": lambda v: v == RECEIPT_SCHEMA,
-            "kind": lambda v: v in get_args(RECEIPT_KIND),
+            "kind": lambda v: v in RECEIPT_KIND,
             "date": lambda v: bool(RECEIPT_DATE.match(v)),
             "algo": lambda v: bool(RECEIPT_ALGO.match(v)),
             "hash": lambda v: bool(RECEIPT_HASH.match(v)),
@@ -135,10 +139,7 @@ class Receipt:
     def update(self, **values: str) -> Receipt:
         """Update this receipt with several values."""
         for name, value in values.items():
-            if name == "date":
-                self.date = datetime.fromisoformat(value.replace("Z", "+00:00"))
-            else:
-                setattr(self, name, value)
+            setattr(self, name, value)
         return self
 
     def update_from(self, other: Receipt, *names: str, **values: str) -> Receipt:
@@ -154,13 +155,9 @@ class Receipt:
         if sum((v for v in issues.values()), []):
             raise ValueError("Invalid receipt", issues)
 
-        _data = {**data}  # copy to prevent modification
-        schema = _data.pop("$schema")
-        date = datetime.fromisoformat(_data.pop("date").replace("Z", "+00:00"))
-        kind: RECEIPT_KIND = (  # mypy can't detect this properly
-            "published" if _data.pop("kind") == "published" else "embedded"
-        )
-        return Receipt(schema=schema, kind=kind, date=date, **_data)
+        schema = data["$schema"]
+        _data = {k: v for k, v in data.items() if k != "$schema"}
+        return Receipt(schema=schema, **_data)
 
     @staticmethod
     def from_url(url: str) -> Receipt:
@@ -170,7 +167,7 @@ class Receipt:
 
     @staticmethod
     def from_path(path: Path, version: str = "", algo: str = DEFAULT_HASH) -> Receipt:
-        """Return receipt for a `path`. Calls `$ {path} --version`"""
+        """Return hash and version for a `path`."""
         digest = hashlib.new(algo, path.read_bytes()).hexdigest()
         if not version:
             cmd = (f"{path.resolve()} --version",)

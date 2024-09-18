@@ -2,8 +2,6 @@
 
 # std
 from pathlib import Path
-from datetime import datetime
-from datetime import timezone
 from unittest.mock import MagicMock
 from unittest.mock import patch
 import json
@@ -18,8 +16,8 @@ from cosmofy.receipt import RECEIPT_SCHEMA
 
 def test_is_newer() -> None:
     """Compare receipts."""
-    r1 = Receipt(date=datetime(2000, 1, 1, tzinfo=timezone.utc))
-    r2 = Receipt(date=datetime(2000, 1, 2, tzinfo=timezone.utc))
+    r1 = Receipt(date="2000-01-01T00:00:00Z")
+    r2 = Receipt(date="2000-01-02T00:00:00Z")
     assert r2.is_newer(r1)
     assert not r1.is_newer(r2)
     assert not r1.is_newer(r1)
@@ -27,7 +25,7 @@ def test_is_newer() -> None:
 
 def test_serialization() -> None:
     """Receipt serialization."""
-    r1 = Receipt(date=datetime(2000, 1, 1, tzinfo=timezone.utc))
+    r1 = Receipt(date="2000-01-01T00:00:00Z")
     expected = {
         "$schema": RECEIPT_SCHEMA,
         "kind": "embedded",
@@ -59,7 +57,7 @@ def test_validation() -> None:
         "malformed": [],
     }
 
-    r1 = Receipt(date=datetime(2000, 1, 1, tzinfo=timezone.utc))
+    r1 = Receipt(date="2000-01-01T00:00:00Z")
     assert not r1.is_valid()
     assert Receipt.find_issues(r1.asdict()) == {
         "missing": [],
@@ -82,14 +80,14 @@ def test_validation() -> None:
 
 def test_update() -> None:
     """Update fields."""
-    r1 = Receipt(date=datetime(2000, 1, 1, tzinfo=timezone.utc))
-    r2 = Receipt(date=datetime(2000, 1, 2, tzinfo=timezone.utc))
+    r1 = Receipt(date="2000-01-01T00:00:00Z")
+    r2 = Receipt(date="2000-01-02T00:00:00Z")
     r2.update_from(r1, "date")
     assert r1 == r2
 
     r2.update(algo="sha1", date="2000-01-03T00:00:00Z")
     assert r2.algo == "sha1"
-    assert r2.date == datetime(2000, 1, 3, tzinfo=timezone.utc)
+    assert r2.date == "2000-01-03T00:00:00Z"
 
 
 def test_from_dict() -> None:
