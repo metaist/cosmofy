@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 # pkg
 from cosmofy import updater
+from cosmofy.receipt import Receipt
 
 
 @patch("cosmofy.updater.zipfile.ZipFile")
@@ -20,11 +21,11 @@ def test_updater(
     """Self-updater."""
     path = Path("/tmp/fake")
     _ZipFile.return_value.__enter__.return_value.read.return_value = "{}"
-    _from_dict.return_value = updater.Receipt(
+    _from_dict.return_value = Receipt(
         date="2000-01-01T00:00:00Z",
         receipt_url="https://example.com/fake.json",
     )
-    _receipt.return_value = updater.Receipt(
+    _receipt.return_value = Receipt(
         kind="published",
         date="2000-01-01T00:00:00Z",
         receipt_url="https://example.com/fake.json",
@@ -34,9 +35,7 @@ def test_updater(
     assert updater.self_update(path) == 0
 
     # newer
-    _receipt.return_value = updater.Receipt(
-        kind="published", date="2000-01-02T00:00:00Z"
-    )
+    _receipt.return_value = Receipt(kind="published", date="2000-01-02T00:00:00Z")
     _release.return_value = path
     assert updater.self_update(path) == 0
 
@@ -45,9 +44,7 @@ def test_updater(
     assert updater.self_update(path) == 1
 
     # error getting release
-    _receipt.return_value = updater.Receipt(
-        kind="published", date="2000-01-02T00:00:00Z"
-    )
+    _receipt.return_value = Receipt(kind="published", date="2000-01-02T00:00:00Z")
     _release.return_value = None
     assert updater.self_update(path) == 1
 

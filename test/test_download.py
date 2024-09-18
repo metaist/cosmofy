@@ -13,6 +13,7 @@ import hashlib
 
 # pkg
 from cosmofy import downloader
+from cosmofy.receipt import Receipt
 
 
 @patch("cosmofy.downloader.urlopen")
@@ -184,7 +185,7 @@ def test_download_release(
 @patch("cosmofy.downloader.Receipt.from_url")
 def test_download_receipt(_from_url: MagicMock) -> None:
     """Download a receipt."""
-    expected = downloader.Receipt()
+    expected = Receipt()
     _from_url.return_value = expected
 
     url = "https://example.com/fake.json"

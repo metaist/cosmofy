@@ -21,7 +21,7 @@ from cosmofy.args import Args
 from cosmofy.args import DEFAULT_PYTHON_URL
 from cosmofy.bundler import _archive
 from cosmofy.bundler import Bundler
-from cosmofy.downloader import Receipt
+from cosmofy.receipt import Receipt
 from cosmofy.updater import PATH_RECEIPT
 from cosmofy.zipfile2 import ZipFile2
 
