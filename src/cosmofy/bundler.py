@@ -24,7 +24,6 @@ import zipfile
 
 # pkg
 from .args import Args
-from .args import COSMOFY_PYTHON_URL
 from .updater import download
 from .updater import download_if_newer
 from .updater import move_executable
@@ -156,18 +155,18 @@ class Bundler:
         self, src: Path, dest: Path, archive: Optional[ZipFile2] = None
     ) -> ZipFile2:
         """Copy the archive from cache."""
-        log.debug(f"{self.banner}download (if newer): {COSMOFY_PYTHON_URL}")
+        log.debug(f"{self.banner}download (if newer): {self.args.python_url}")
         if self.args.for_real:
-            download_if_newer(COSMOFY_PYTHON_URL, src)
+            download_if_newer(self.args.python_url, src)
 
         self.fs_copy(src, dest)
         return archive or _archive(dest)
 
     def from_download(self, dest: Path, archive: Optional[ZipFile2] = None) -> ZipFile2:
         """Download archive."""
-        log.debug(f"{self.banner}download (fresh): {COSMOFY_PYTHON_URL} to {dest}")
+        log.debug(f"{self.banner}download (fresh): {self.args.python_url} to {dest}")
         if self.args.for_real:
-            download(COSMOFY_PYTHON_URL, dest)
+            download(self.args.python_url, dest)
         return archive or _archive(dest)
 
     def setup_temp(self) -> Tuple[Path, Optional[ZipFile2]]:

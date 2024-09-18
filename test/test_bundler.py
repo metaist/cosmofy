@@ -18,7 +18,7 @@ import pytest
 # pkg
 from cosmofy import bundler
 from cosmofy.args import Args
-from cosmofy.args import COSMOFY_PYTHON_URL
+from cosmofy.args import DEFAULT_PYTHON_URL
 from cosmofy.bundler import _archive
 from cosmofy.bundler import _pack_uint32
 from cosmofy.bundler import Bundler
@@ -127,7 +127,7 @@ def test_from_download() -> None:
 
         with patch("cosmofy.bundler.download") as mock:
             real.from_download(dest)
-            mock.assert_called_once_with(COSMOFY_PYTHON_URL, dest)
+            mock.assert_called_once_with(DEFAULT_PYTHON_URL, dest)
 
 
 def test_setup_temp() -> None:

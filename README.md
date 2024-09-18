@@ -42,7 +42,8 @@ cosmofy src/cosmofy \
 
 <!--[[[cog
 from cosmofy.args import USAGE
-cog.outl(f"\n```text\n{USAGE}```\n")
+doc = USAGE.replace('COSMOFY_CACHE_DIR=/home/lev/.cache/cosmofy', 'COSMOFY_CACHE_DIR=~/.cache/cosmofy')
+cog.outl(f"\n```text\n{doc}```\n")
 ]]]-->
 
 ```text
@@ -60,31 +61,24 @@ USAGE
 
 GENERAL
 
-  -h, --help
-    Show this help message and exit.
-
-  --version
-    Show program version and exit.
-
-  --debug
-    Show debug messages.
-
-  -n, --dry-run
-    Do not make any file system changes.
-
-  --self-update
-    Update `cosmofy` to the latest version.
+  -h, --help        Show this help message and exit.
+  --version         Show program version and exit.
+  --debug           Show debug messages.
+  -n, --dry-run     Do not make any file system changes.
+  --self-update     Update `cosmofy` to the latest version.
 
 CACHE
 
   --python-url URL
     URL from which to download Cosmopolitan Python.
-    [env: COSMOFY_PYTHON_URL=https://cosmo.zip/pub/cosmos/bin/python]
+    [default: https://cosmo.zip/pub/cosmos/bin/python]
+    [env: COSMOFY_PYTHON_URL=None]
 
   --cache PATH
     Directory in which to cache Cosmopolitan Python downloads.
     Use `false` or `0` to disable caching.
-    [env: COSMOFY_CACHE_DIR=/home/lev/.cache/cosmofy]
+    [default: ~/.cache/cosmofy]
+    [env: COSMOFY_CACHE_DIR=None]
 
   --clone
     Obtain python by cloning `cosmofy` and removing itself instead of
@@ -145,17 +139,17 @@ SELF-UPDATER
 
   --receipt-url URL
     URL to the published receipt.
-    [default: <release-url>.json]
+    [default: --release-url + .json]
     [env: RECEIPT_URL=]
 
   --release-url URL
     URL to the file to download.
-    [default: <receipt-url-without.json>]
+    [default: --receipt-url without .json]
     [env: RELEASE_URL=]
 
   --release-version STRING
     Release version.
-    [default: we run `output --version` and save first version-looking string]
+    [default: first version-like string in `$(${output} --version)`]
 ```
 
 <!--[[[end]]]-->
