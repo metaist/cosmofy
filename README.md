@@ -8,20 +8,6 @@
 
 [Cosmopolitan apps](https://github.com/jart/cosmopolitan) are cross-platform binary files that work natively on Linux, macOS, and Windows. `cosmofy` is a tool to bundle your python project into a portable Cosmopolitan app.
 
-```bash
-# install
-dest=~/.local/bin/cosmofy
-curl -sSz $dest -o $dest -L https://github.com/metaist/cosmofy/releases/latest/download/cosmofy
-chmod +x $dest
-
-# bundle a single script
-cosmofy my-script.py
-# => produces my-script.com
-
-# bundle a directory
-cosmofy src/cosmofy --args '-m cosmofy --cosmo'
-```
-
 ## Install
 
 macOS / Linux:
