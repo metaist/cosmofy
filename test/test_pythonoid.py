@@ -1,6 +1,7 @@
 """Test python CLI emulation within python."""
 
 # std
+from pathlib import Path
 from shlex import split
 from unittest.mock import patch
 
@@ -8,9 +9,32 @@ from unittest.mock import patch
 import pytest
 
 # pkg
+from cosmofy import pythonoid
+from cosmofy.pythonoid import PythonArgs
 from cosmofy.updater import main
-from cosmofy.updater import PythonArgs
 from cosmofy.updater import run_python
+
+
+def test_main_detector() -> None:
+    """Detect __main__ blocks."""
+    code = b"""if __name__ == "__main__":\n\t..."""
+    assert pythonoid.RE_MAIN.search(code)
+
+    code = b"""\nif __name__ == '__main__':\n\t..."""
+    assert pythonoid.RE_MAIN.search(code)
+
+    code = b"""\nif '__main__'  ==  __name__  :\n\t..."""
+    assert pythonoid.RE_MAIN.search(code)
+
+    code = b"""\n# if __name__ == "__main__":\n\t..."""
+    assert not pythonoid.RE_MAIN.search(code)
+
+
+def test_compile() -> None:
+    """Compile python."""
+    src = Path(__file__).parent.parent / "src" / "cosmofy" / "__init__.py"
+    assert isinstance(pythonoid.compile_python(src), bytearray)
+    assert isinstance(pythonoid.compile_python(src, src.read_bytes()), bytearray)
 
 
 def test_parse() -> None:
@@ -56,22 +80,23 @@ def test_parse() -> None:
 
     # unsupported args
     with pytest.raises(ValueError):
-        PythonArgs.parse(split("--help"))
+        PythonArgs.parse(split("-b"))
 
 
 def test_run() -> None:
     """Run python CLI."""
+    assert run_python(split("--help")) == 0
     assert run_python(split("--version")) == 0
     assert run_python(split("-VV")) == 0
     assert run_python(split("--fake")) == 2  # invalid arg
-    assert run_python(split("--help")) == 2  # unsupported arg
+    assert run_python(split("-b")) == 2  # unsupported arg
 
     assert run_python(split("-c 'f=42'")) == 0
     assert run_python(split("-c 'f=1/0'")) == 1
     assert run_python(split("-m examples.pkg-with-main")) == 0
     assert run_python(split("examples/single-file/file-with-main.py")) == 0
 
-    with patch("cosmofy.updater.repl.interact") as _interact:
+    with patch("cosmofy.pythonoid.repl.interact") as _interact:
         assert run_python(split("-i")) == 0
         assert _interact.called
 

@@ -20,6 +20,8 @@
     "pypi",
     "pyright",
     "pytest",
+    "PYTHONINSPECT",
+    "pythonoid",
     "setuptools",
     "venv",
     "zinfo"

@@ -2,7 +2,6 @@
 
 # std
 from __future__ import annotations
-from importlib.util import MAGIC_NUMBER
 from pathlib import Path
 from shlex import split
 from typing import Dict
@@ -13,9 +12,7 @@ from typing import Tuple
 from typing import Union
 import io
 import logging
-import marshal
 import os
-import re
 import shlex
 import shutil
 import sys
@@ -24,69 +21,24 @@ import zipfile
 
 # pkg
 from .args import Args
+from .pythonoid import compile_python
+from .pythonoid import MAIN_FILES
+from .pythonoid import PACKAGE_FILES
+from .pythonoid import Pkg
+from .pythonoid import PythonArgs
+from .pythonoid import RE_MAIN
 from .updater import download
 from .updater import download_if_newer
 from .updater import move_executable
 from .updater import PATH_RECEIPT
-from .updater import PythonArgs
 from .updater import Receipt
 from .zipfile2 import ZipFile2
 
 log = logging.getLogger(__name__)
 
-Pkg = Tuple[str, ...]
-"""Package information."""
-
-MODULE_SUFFIXES = (".py", ".pyc")
-"""Python module suffixes."""
-
-PACKAGE_STEMS = ("__init__", "__main__")
-"""File stems that indicate a python package."""
-
-PACKAGE_FILES = tuple(p + s for p in PACKAGE_STEMS for s in MODULE_SUFFIXES)
-"""File names that indicate a python package."""
-
-MAIN_FILES = ("__main__.py", "__main__.pyc")
-"""File names that indicate python package has a main."""
-
-RE_MAIN = re.compile(
-    rb"""
-    (^|\n)if\s*(
-    __name__\s*==\s*['"]__main__['"]| # written the normal way
-    ['"]__main__['"]\s*==\s*__name__) # written in reverse
-    """,
-    re.VERBOSE,
-)
-"""Regex for detecting a main section in `bytes`."""
-
 
 def _archive(path: Union[str, Path, io.BytesIO]) -> ZipFile2:
     return ZipFile2(path, mode="a", compression=zipfile.ZIP_DEFLATED, compresslevel=9)
-
-
-# https://github.com/python/cpython/blob/3.12/Lib/importlib/_bootstrap_external.py#L79C1-L81C55
-def _pack_uint32(x: Union[int, float]) -> bytes:
-    """Convert a 32-bit integer to little-endian."""
-    return (int(x) & 0xFFFFFFFF).to_bytes(4, "little")
-
-
-def compile_python(path: Path, source: Optional[bytes] = None) -> bytearray:
-    """Return the bytecode."""
-    source = path.read_bytes() if source is None else source
-    stats = path.stat()
-    mtime = stats.st_mtime
-    source_size = stats.st_size
-
-    # https://github.com/python/cpython/blob/3.12/Lib/importlib/_bootstrap_external.py#L1059
-    code = compile(source, path, "exec", dont_inherit=True, optimize=-1)
-
-    # https://github.com/python/cpython/blob/3.12/Lib/importlib/_bootstrap_external.py#L764
-    data = bytearray(MAGIC_NUMBER)
-    data.extend(_pack_uint32(0))
-    data.extend(_pack_uint32(mtime))
-    data.extend(_pack_uint32(source_size))
-    data.extend(marshal.dumps(code))
-    return data
 
 
 def expand_globs(start: Path, *patterns: str) -> Iterator[Tuple[Path, Set[str]]]:

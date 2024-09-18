@@ -20,9 +20,7 @@ from cosmofy import bundler
 from cosmofy.args import Args
 from cosmofy.args import DEFAULT_PYTHON_URL
 from cosmofy.bundler import _archive
-from cosmofy.bundler import _pack_uint32
 from cosmofy.bundler import Bundler
-from cosmofy.bundler import compile_python
 from cosmofy.updater import PATH_RECEIPT
 from cosmofy.updater import Receipt
 from cosmofy.zipfile2 import ZipFile2
@@ -33,29 +31,9 @@ EXAMPLES = Path(__file__).parent.parent / "examples"
 Include = Iterator[Tuple[Path, Set[str]]]
 
 
-def test_main_detector() -> None:
-    """Detect __main__ blocks."""
-    code = b"""if __name__ == "__main__":\n\t..."""
-    assert bundler.RE_MAIN.search(code)
-
-    code = b"""\nif __name__ == '__main__':\n\t..."""
-    assert bundler.RE_MAIN.search(code)
-
-    code = b"""\nif '__main__'  ==  __name__  :\n\t..."""
-    assert bundler.RE_MAIN.search(code)
-
-    code = b"""\n# if __name__ == "__main__":\n\t..."""
-    assert not bundler.RE_MAIN.search(code)
-
-
 def test_utilities() -> None:
     """Utility methods."""
     assert isinstance(_archive(io.BytesIO()), ZipFile2)
-    assert isinstance(_pack_uint32(1024), bytes)
-
-    src = Path(__file__).parent.parent / "src" / "cosmofy" / "__init__.py"
-    assert isinstance(compile_python(src), bytearray)
-    assert isinstance(compile_python(src, src.read_bytes()), bytearray)
 
 
 def test_globs() -> None:
@@ -235,7 +213,7 @@ def test_add_updater() -> None:
 
     # unsupported arg
     with pytest.raises(SystemExit):
-        test.add_updater(archive, "-h", receipt)
+        test.add_updater(archive, "-b", receipt)
 
     # valid args
     assert (
