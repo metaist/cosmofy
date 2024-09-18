@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/metaist/cosmofy/0.1.0/cosmofy.schema.json",
+  "title": "Cosmofy Receipt",
+  "description": "Version and hash information about a file.",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "description": "Whether this is an embedded or published receipt.",
+      "type": "string",
+      "enum": ["embedded", "published"],
+      "$comment": "Embedded receipts can have zero-length hash and version."
+    },
+
+    "date": {
+      "description": "UTC ISO 8601 date and time (up to seconds) this receipt was created.",
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "minLength": 20,
+      "maxLength": 20,
+      "$comment": "The pattern does not do date validation."
+    },
+
+    "algo": {
+      "description": "Lowercase name of the hashing algorithm used.",
+      "type": "string",
+      "pattern": "^[a-z0-9-_]+$",
+      "minLength": 1,
+      "default": "sha256",
+      "$comment": "Not using an enum because hashing algorithm recommendations change."
+    },
+
+    "hash": {
+      "description": "File hash.",
+      "type": "string",
+      "pattern": "^[a-f0-9]+$",
+      "$comment": "Embedded receipts can a zero length string."
+    },
+
+    "receipt_url": {
+      "description": "URL of this receipt.",
+      "type": "string",
+      "minLength": 1
+    },
+
+    "release_url": {
+      "description": "URL of file to download.",
+      "type": "string",
+      "minLength": 1
+    },
+
+    "version": {
+      "description": "File version.",
+      "type": "string",
+      "$comment": "Embedded receipts can a zero length string."
+    }
+  },
+
+  "required": [
+    "kind",
+    "date",
+    "algo",
+    "hash",
+    "receipt_url",
+    "release_url",
+    "version"
+  ],
+
+  "if": {
+    "properties": { "kind": { "const": "published" } }
+  },
+
+  "then": {
+    "properties": {
+      "hash": { "minLength": 1 },
+      "version": { "minLength": 1 }
+    }
+  }
+}

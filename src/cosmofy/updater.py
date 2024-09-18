@@ -86,7 +86,9 @@ CHUNK_SIZE = 65536
 RE_VERSION = re.compile(rb"\d+\.\d+\.\d+(-[\da-zA-Z-.]+)?(\+[\da-zA-Z-.]+)?")
 """Regex for a semver version string."""
 
-RECEIPT_SCHEMA = "https://metaist.com/schema/2024-09-17-cosmofy.schema.json"
+RECEIPT_SCHEMA = (
+    "https://raw.githubusercontent.com/metaist/cosmofy/0.1.0/cosmofy.schema.json"
+)
 """URI of Cosmofy Receipt Schema."""
 
 RECEIPT_KIND = Literal["embedded", "published"]
