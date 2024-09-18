@@ -12,8 +12,8 @@ import json
 import pytest
 
 # pkg
-from cosmofy.updater import Receipt
-from cosmofy.updater import RECEIPT_SCHEMA
+from cosmofy.receipt import Receipt
+from cosmofy.receipt import RECEIPT_SCHEMA
 
 
 def test_is_newer() -> None:
@@ -111,8 +111,8 @@ def test_from_dict() -> None:
         Receipt.from_dict(data)
 
 
-@patch("cosmofy.updater.json.load")
-@patch("cosmofy.updater.urlopen")
+@patch("cosmofy.receipt.json.load")
+@patch("cosmofy.receipt.urlopen")
 def test_from_url(_urlopen: MagicMock, _load: MagicMock) -> None:
     """Receipt from url."""
     _urlopen.return_value.read.return_value = b"{}"
@@ -121,9 +121,9 @@ def test_from_url(_urlopen: MagicMock, _load: MagicMock) -> None:
         Receipt.from_url("https://example.com/foo.json")
 
 
-@patch("cosmofy.updater.hashlib.new")
-@patch("cosmofy.updater.Path.read_bytes")
-@patch("cosmofy.updater.subprocess.run")
+@patch("cosmofy.receipt.hashlib.new")
+@patch("cosmofy.receipt.Path.read_bytes")
+@patch("cosmofy.receipt.subprocess.run")
 def test_from_path(_run: MagicMock, _read_bytes: MagicMock, _new: MagicMock) -> None:
     """Receipt with hash and version."""
     fake_hash = "0123456789abcdef"
