@@ -2,7 +2,7 @@
 
 ## Local Development
 
-We recommend installing , but you can also use `pip`.
+We recommend installing `uv`, but you can also use `pip`.
 
 ```bash
 # get the code
