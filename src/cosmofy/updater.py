@@ -94,7 +94,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = argv or sys.argv[1:]
     if "--self-update" in args:
         if "-h" in args or "--help" in args:
-            print(USAGE)
+            print(USAGE, end="")
             return 0
         if "--version" in args:
             print(f"cosmofy.updater {__version__} ({__pubdate__})")
