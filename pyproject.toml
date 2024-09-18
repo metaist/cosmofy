@@ -136,7 +136,7 @@ dev-all.shell = """
 # Build
 cosmo = """
   cosmofy src/cosmofy \
-    --output dist/cosmofy --receipt \
+    --output dist/cosmofy \
     --args '-m cosmofy --cosmo' \
     --release-url "https://github.com/metaist/cosmofy/releases/latest/download/cosmofy" \
     $@

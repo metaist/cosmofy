@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterator
 from typing import Set
 from typing import Tuple
+from unittest.mock import MagicMock
 from unittest.mock import patch
 from zipfile import ZipInfo
 import io
@@ -263,6 +264,12 @@ def test_write_args() -> None:
     assert test.write_args(archive, tuple())  # skip writing
     assert test.write_args(archive, ("foo", "__init__"))
 
+    # NOTE: This test messes up things in a way I don't understand.
+    # with patch("cosmofy.bundler.Bundler.add_updater"):
+    #     test2 = Bundler(Args(dry_run=True, release_url="https://example.com"))
+    #     archive2 = _archive(io.BytesIO())
+    #     assert test2.write_args(archive2, ("foo", "__init__"))
+
     real = Bundler(Args(args="-m foo.bar --extra"))
     assert real.write_args(archive, ("foo", "bar"))
 
@@ -278,24 +285,38 @@ def test_write_output() -> None:
     assert test.write_output(archive, ("foo", "bar")) == Path("bar.com")
 
 
-# @patch("cosmofy.bundler.Receipt.from_path")
-# def test_write_receipt(_from_path: MagicMock) -> None:
-#     """Write receipt."""
-#     _from_path.return_value = Receipt(hash="abcdef012356", version="0.1.0")
+@patch("cosmofy.bundler.Receipt.from_path")
+def test_write_receipt(_from_path: MagicMock) -> None:
+    """Write receipt."""
+    _from_path.return_value = Receipt(hash="abcdef012356", version="0.1.0")
 
-#     test = Bundler(Args(receipt=True, dry_run=True))
-#     real = Bundler(Args(receipt=True))
-#     with tempfile.NamedTemporaryFile() as f:
-#         bundle = Path(f.name)
-#         receipt = Receipt(receipt_url="", release_url="")
-#         test.write_receipt(bundle, receipt)
-#         _from_path.assert_called()
+    test = Bundler(Args(receipt=Path("fake.json"), dry_run=True))
+    with tempfile.NamedTemporaryFile() as f:
+        bundle = Path(f.name)
+        receipt = Receipt(receipt_url="a", release_url="b")
+        test.write_receipt(bundle, receipt)
+        _from_path.assert_called()
 
-#         real.write_receipt(bundle, receipt)
-#         _from_path.assert_called()
+        path = Path(f.name + ".json")
+        real = Bundler(Args(receipt=path))
+        real.write_receipt(bundle, receipt)
+        _from_path.assert_called()
+        path.unlink()
 
 
 def test_run() -> None:
     """Run bundler."""
     test = Bundler(Args(dry_run=True))
     assert test.run() == Path("out.com")
+
+    test2 = Bundler(
+        Args(
+            dry_run=True,
+            release_url="https://example.com/foo",
+            receipt_url="https://example.com/foo.json",
+        )
+    )
+
+    with patch("cosmofy.bundler.Bundler.write_receipt") as _write:
+        _write.return_value = Receipt()
+        assert test2.run() == Path("out.com")
