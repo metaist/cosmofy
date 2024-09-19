@@ -6,7 +6,7 @@
   <a href="https://pypi.org/project/cosmofy"><img alt="Supported Python Versions" src="https://img.shields.io/pypi/pyversions/cosmofy" /></a>
 </p>
 
-[Cosmopolitan apps](https://github.com/jart/cosmopolitan) are cross-platform binary files that work natively on Linux, macOS, and Windows. `cosmofy` is a tool to bundle your python project into a portable Cosmopolitan app.
+`cosmofy` bundles your python app into a **single executable** which runs on Linux, macOS, and Windows. It uses [Cosmopolitan libc](https://github.com/jart/cosmopolitan).
 
 ## Install
 
