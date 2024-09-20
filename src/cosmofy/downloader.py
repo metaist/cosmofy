@@ -4,7 +4,9 @@
 from datetime import datetime
 from datetime import timezone
 from email.utils import parsedate_to_datetime
+from http.client import HTTPResponse
 from pathlib import Path
+from typing import Iterator
 from typing import Optional
 from urllib.error import HTTPError
 from urllib.request import Request
@@ -36,12 +38,25 @@ def move_executable(src: Path, dest: Path) -> Path:
     return dest
 
 
+def progress(response: HTTPResponse, prefix: str = "Downloading: ") -> Iterator[bytes]:
+    """Display progress information."""
+    header = response.getheader("Content-Length") or "0"
+    total = int(header.strip())
+    done = 0
+    while chunk := response.read(CHUNK_SIZE):
+        done += len(chunk)
+        percent = done / total * 100
+        print(f"\r{prefix}{percent:.2f}%", end="", flush=True)
+        yield chunk
+    print("")
+
+
 def download(url: str, path: Path) -> Path:
     """Download `url` to path."""
     log.info(f"Download {url} to {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     with urlopen(url) as response, path.open("wb") as output:
-        while chunk := response.read(CHUNK_SIZE):
+        for chunk in progress(response):
             output.write(chunk)
     return path
 
@@ -64,8 +79,7 @@ def download_and_hash(url: str, path: Path, algo: str = DEFAULT_HASH) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     digest = hashlib.new(algo)
     with urlopen(url) as response, path.open("wb") as output:
-        while chunk := response.read(CHUNK_SIZE):
-            print(chunk)
+        for chunk in progress(response):
             digest.update(chunk)
             output.write(chunk)
     return digest.hexdigest()
