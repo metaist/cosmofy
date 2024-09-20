@@ -81,6 +81,12 @@ FILES
     Cosmopolitan Python arguments.
     [default: `"-m <main_module>"`]
 
+    If NOT using the self-updater, all python options are supported:
+    https://docs.python.org/3/using/cmdline.html
+
+    If using the self-updater only a subset is supported:
+    https://github.com/metaist/cosmofy#supported-python-cli
+
   --add GLOB, <add>
     At least one glob-like patterns to add. Folders are recursively added.
     Files ending in `.py` will be compiled.
@@ -100,17 +106,19 @@ FILES
 SELF-UPDATER
 
   Specifying any of the options below will add `cosmofy.updater`
-  to make the resulting app capable of updating itself. You
+  to make the resulting bundle capable of updating itself. You
   must supply at least `--receipt-url` or `--release-url`.
 
-  In addition to building the app, there will be a second output
+  In addition to building the bundle, there will be a second output
   which is a JSON file (called a receipt) that needs to be uploaded
-  together with the app.
+  together with the bundle.
 
-  When the app runs, the updater first checks to see if it was called with
-  `--self-update`. If it wasn't, execution continues as normal.
-  If it was, the updater checks the published receipt to see if there is a
-  newer version of the app and downloads it, if appropriate.
+  If the bundle is run with `--self-update` anywhere in the arguments,
+  `cosmofy.updater` will run. It will compare it's internal build
+  date with the date at `--receipt-url` and will download any updates, if
+  they exist.
+
+  Otherwise, the bundle will run as normal by calling `--args`
 
   NOTE: The updater will alter `--args` so that it gets called first.
   It supports most Python Command Line interface options (like `-m`).

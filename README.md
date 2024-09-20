@@ -6,7 +6,8 @@
   <a href="https://pypi.org/project/cosmofy"><img alt="Supported Python Versions" src="https://img.shields.io/pypi/pyversions/cosmofy" /></a>
 </p>
 
-`cosmofy` bundles your python app into a **single executable** which runs on Linux, macOS, and Windows. It uses [Cosmopolitan libc](https://github.com/jart/cosmopolitan).
+`cosmofy` bundles your python app into a **single executable** which runs on
+Linux, macOS, and Windows. It uses [Cosmopolitan libc](https://github.com/jart/cosmopolitan).
 
 ## Install
 
@@ -23,19 +24,19 @@ Windows: (PowerShell instructions coming soon)
 ## Examples
 
 ```bash
-# bundle a single script
-cosmofy examples/single-file/file-with-main.py
+# bundle a script with python
+cosmofy myscript.py # produces `myscript.com`
+./myscript.com # runs on macOS / Linux / Windows
 
-# bundle a directory
-cosmofy examples/pkg-nested
+# bundle a whole directory; change output path
+cosmofy src/my-pkg --args '-m my-pkg --more-args' --output dist/my-pkg
+./dist/my-pkg # starts bundled python with "-m my-pky --more-args"
 
-# add additional args, change output path
-cosmofy src/cosmofy --args '-m cosmofy --cosmo' --output dist/cosmofy
-
-# add self-updater
-cosmofy src/cosmofy \
-  --args '-m cosmofy --cosmo' \
+# bundle self-updater (see below)
+cosmofy src/my-pkg \
   --release-url https://github.com/metaist/cosmofy/releases/latest/download/cosmofy
+./my-pkg.com # run app as normal
+./my-pkg.com --self-update # run cosmofy.updater to install any updates
 ```
 
 ## Usage
@@ -98,6 +99,12 @@ FILES
     Cosmopolitan Python arguments.
     [default: `"-m <main_module>"`]
 
+    If NOT using the self-updater, all python options are supported:
+    https://docs.python.org/3/using/cmdline.html
+
+    If using the self-updater only a subset is supported:
+    https://github.com/metaist/cosmofy#supported-python-cli
+
   --add GLOB, <add>
     At least one glob-like patterns to add. Folders are recursively added.
     Files ending in `.py` will be compiled.
@@ -117,17 +124,19 @@ FILES
 SELF-UPDATER
 
   Specifying any of the options below will add `cosmofy.updater`
-  to make the resulting app capable of updating itself. You
+  to make the resulting bundle capable of updating itself. You
   must supply at least `--receipt-url` or `--release-url`.
 
-  In addition to building the app, there will be a second output
+  In addition to building the bundle, there will be a second output
   which is a JSON file (called a receipt) that needs to be uploaded
-  together with the app.
+  together with the bundle.
 
-  When the app runs, the updater first checks to see if it was called with
-  `--self-update`. If it wasn't, execution continues as normal.
-  If it was, the updater checks the published receipt to see if there is a
-  newer version of the app and downloads it, if appropriate.
+  If the bundle is run with `--self-update` anywhere in the arguments,
+  `cosmofy.updater` will run. It will compare it's internal build
+  date with the date at `--receipt-url` and will download any updates, if
+  they exist.
+
+  Otherwise, the bundle will run as normal by calling `--args`
 
   NOTE: The updater will alter `--args` so that it gets called first.
   It supports most Python Command Line interface options (like `-m`).
@@ -156,16 +165,50 @@ SELF-UPDATER
 
 ## Self Updater
 
-If you provide `--receipt-url` or `--release-url`, `cosmofy` will add a self-updater
-to the output bundle. This self-updater will look for the `--self-update` option on the command line and look for an updated release. When the option is absent, it will run `--args` as usual (see below for minor limitations).
+If you provide `--receipt-url` or `--release-url`, `cosmofy` will add a
+self-updater to the output bundle.
+
+- If the bundle is run with `--self-update` anywhere in the arguments,
+  `cosmofy.updater` will run. It will compare it's internal build
+  date with the date at `--receipt-url` and will download any updates, if
+  they exist.
+
+- Otherwise, the bundle will run as normal by calling `--args`.
+  [See below](#supported-python-cli) for minor limitations.
+
+<!--[[[cog
+from cosmofy.updater import USAGE
+cog.outl(f"\n```text\n{USAGE[USAGE.find('Usage:'):]}```\n")
+]]]-->
+
+```text
+Usage: <bundle> --self-update [--help] [--version] [--debug]
+
+Options:
+  --self-update     Run this updater instead of <bundle>
+  -h, --help        Show this message and exit.
+  --version         Show updater version and exit.
+  --debug           Show debug messages.
+
+  [env: RECEIPT_URL=]
+  Override the embedded URL for downloading update metadata.
+
+  [env: RELEASE_URL=]
+  Override the published URL for downloading the update.
+```
+
+<!--[[[end]]]-->
 
 ## Supported Python CLI
 
-Cosmopolitan Python apps have a special `.args` file which is read when it starts up. The contents of this file are typically set by the `--args` option. However,
-when using the [self-updater](#self-updater), we need to check for the
-`--self-update` option first. If it is absent we process the rest of the `--args`
-as usual. However, since Python has already started running we only support the
-following [Python Command Line Interface options](https://docs.python.org/3/using/cmdline.html):
+Cosmopolitan Python apps have a special `.args` file which is read when it
+starts up. The contents of this file are typically set by the `--args` option.
+However, when using the [self-updater](#self-updater), we need to check for
+the `--self-update` option first.
+
+If `--self-update` is NOT present, we want to process the rest of the
+`--args` as usual. However, since Python has already started, we only support
+the following [Python Command Line Interface options](https://docs.python.org/3/using/cmdline.html):
 
 - `-c <command>`: run a command
 - `-m <module-name>`: run a module (this is the most common)

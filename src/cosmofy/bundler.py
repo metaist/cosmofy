@@ -225,7 +225,13 @@ class Bundler:
         if self.args.for_real:
             archive.add_file(dest, data, 0o644)
 
-        files = ["downloader.py", "pythonoid.py", "receipt.py", "updater.py"]
+        files = [
+            "__init__.py",
+            "downloader.py",
+            "pythonoid.py",
+            "receipt.py",
+            "updater.py",
+        ]
         for file in files:
             dest = f"{PATH_COSMOFY}/{file}c"
             if archive.NameToInfo.get(dest):  # already done

@@ -13,13 +13,12 @@ import sys
 import zipfile
 
 # pkg
+from . import __pubdate__
+from . import __version__
 from .downloader import download_receipt
 from .downloader import download_release
 from .pythonoid import run_python
 from .receipt import Receipt
-
-__version__ = "0.1.0"
-__pubdate__ = "2024-09-18T18:55:19Z"
 
 log_normal = "%(levelname)s: %(message)s"
 log_debug = "%(name)s.%(funcName)s: %(levelname)s: %(message)s"
@@ -37,27 +36,19 @@ This program is bundled into Cosmopolitan Python apps
 to give them the ability to update themselves.
 See: https://github.com/metaist/cosmofy
 
-Usage: {Path(sys.executable).name} --self-update [--help] [--version] [--debug]
+Usage: <bundle> --self-update [--help] [--version] [--debug]
 
 Options:
-  --self-update
-    Indicates that this self-updater should run instead of the usual
-    program.
+  --self-update     Run this updater instead of <bundle>
+  -h, --help        Show this message and exit.
+  --version         Show updater version and exit.
+  --debug           Show debug messages.
 
-  -h, --help
-   Show this message and exit.
+  [env: RECEIPT_URL={ENV.get("RECEIPT_URL", "")}]
+  Override the embedded URL for downloading update metadata.
 
-  --debug
-    Show debug messages.
-
-Environment:
-  RECEIPT_URL={ENV.get("RECEIPT_URL")}
-    If set, this URL will override the built-in URL for downloading
-    update metadata.
-
-  RELEASE_URL={ENV.get("RELEASE_URL")}
-    If set, this URL will override the published URL for downloading
-    the update.
+  [env: RELEASE_URL={ENV.get("RELEASE_URL", "")}]
+  Override the published URL for downloading the update.
 """
 
 
