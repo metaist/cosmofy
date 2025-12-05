@@ -4,8 +4,6 @@
 from __future__ import annotations
 from os import environ as ENV
 from pathlib import Path
-from typing import List
-from typing import Optional
 import dataclasses
 import logging
 
@@ -176,7 +174,7 @@ class Args:
     python_url: str = COSMOFY_PYTHON_URL or DEFAULT_PYTHON_URL
     """URL from which to download Cosmopolitan Python."""
 
-    cache: Optional[Path] = Path(COSMOFY_CACHE_DIR or DEFAULT_CACHE_DIR)
+    cache: Path | None = Path(COSMOFY_CACHE_DIR or DEFAULT_CACHE_DIR)
     """Directory for caching downloads."""
 
     clone: bool = False
@@ -184,7 +182,7 @@ class Args:
 
     # output
 
-    output: Optional[Path] = None
+    output: Path | None = None
     """Path to the output file."""
 
     # files
@@ -192,18 +190,18 @@ class Args:
     args: str = ""
     """Args to pass to Cosmopolitan python."""
 
-    add: List[str] = dataclasses.field(default_factory=list)
+    add: list[str] = dataclasses.field(default_factory=list)
     """Globs to add."""
 
-    exclude: List[str] = dataclasses.field(default_factory=list)
+    exclude: list[str] = dataclasses.field(default_factory=list)
     """Globs to exclude."""
 
-    remove: List[str] = dataclasses.field(default_factory=list)
+    remove: list[str] = dataclasses.field(default_factory=list)
     """Globs to remove."""
 
     # self-updater
 
-    receipt: Optional[Path] = None
+    receipt: Path | None = None
     """Path to the receipt output."""
 
     receipt_url: str = RECEIPT_URL
@@ -223,7 +221,7 @@ class Args:
         )
 
     @staticmethod
-    def parse(argv: List[str]) -> Args:
+    def parse(argv: list[str]) -> Args:
         args = Args()
         alias = {
             "-h": "--help",

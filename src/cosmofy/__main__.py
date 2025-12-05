@@ -2,8 +2,6 @@
 
 # std
 from __future__ import annotations
-from typing import List
-from typing import Optional
 import logging
 import sys
 
@@ -22,7 +20,7 @@ logging.basicConfig(level=logging.INFO, format=log_normal)
 log = logging.getLogger(__name__)
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """Main entry point."""
     short_usage = "\n" + USAGE[USAGE.find("USAGE") + 5 : USAGE.find("GENERAL")].strip()
 

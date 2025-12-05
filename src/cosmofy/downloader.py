@@ -7,7 +7,6 @@ from email.utils import parsedate_to_datetime
 from http.client import HTTPResponse
 from pathlib import Path
 from typing import Iterator
-from typing import Optional
 from urllib.error import HTTPError
 from urllib.request import Request
 from urllib.request import urlopen
@@ -85,7 +84,7 @@ def download_and_hash(url: str, path: Path, algo: str = DEFAULT_HASH) -> str:
     return digest.hexdigest()
 
 
-def download_receipt(url: str) -> Optional[Receipt]:
+def download_receipt(url: str) -> Receipt | None:
     """Try to download a receipt."""
     log.info(f"Download: {url}")
     receipt = None
@@ -98,7 +97,7 @@ def download_receipt(url: str) -> Optional[Receipt]:
 
 def download_release(
     url: str, path: Path, expected: str, algo: str = DEFAULT_HASH
-) -> Optional[Path]:
+) -> Path | None:
     """Download release from `url` checking the hash along the way."""
     log.info(f"Download {url} to {path}")
     with tempfile.NamedTemporaryFile(delete=False) as out:

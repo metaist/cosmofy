@@ -3,9 +3,6 @@
 # std
 from pathlib import Path
 from typing import Iterator
-from typing import Set
-from typing import Tuple
-from unittest.mock import patch
 from unittest.mock import MagicMock
 from zipfile import ZipInfo
 import io
@@ -28,7 +25,7 @@ from cosmofy.zipfile2 import ZipFile2
 EXAMPLES = Path(__file__).parent.parent / "examples"
 (EXAMPLES / "empty").mkdir(parents=True, exist_ok=True)  # cannot be committed
 
-Include = Iterator[Tuple[Path, Set[str]]]
+Include = Iterator[tuple[Path, set[str]]]
 """Type of include."""
 
 

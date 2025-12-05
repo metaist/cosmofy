@@ -4,12 +4,7 @@
 from __future__ import annotations
 from pathlib import Path
 from shlex import split
-from typing import Dict
 from typing import Iterator
-from typing import Optional
-from typing import Set
-from typing import Tuple
-from typing import Union
 import io
 import logging
 import os
@@ -38,13 +33,13 @@ from .zipfile2 import ZipFile2
 log = logging.getLogger(__name__)
 
 
-def _archive(path: Union[str, Path, io.BytesIO]) -> ZipFile2:
+def _archive(path: str | Path | io.BytesIO) -> ZipFile2:
     return ZipFile2(path, mode="a", compression=zipfile.ZIP_DEFLATED, compresslevel=9)
 
 
-def expand_globs(start: Path, *patterns: str) -> Iterator[Tuple[Path, Set[str]]]:
+def expand_globs(start: Path, *patterns: str) -> Iterator[tuple[Path, set[str]]]:
     """Yield paths of all glob patterns."""
-    seen: Set[Path] = set()
+    seen: set[Path] = set()
     for pattern in patterns:
         if pattern == ".":
             paths = [start]
@@ -105,7 +100,7 @@ class Bundler:
         return dest
 
     def from_cache(
-        self, src: Path, dest: Path, archive: Optional[ZipFile2] = None
+        self, src: Path, dest: Path, archive: ZipFile2 | None = None
     ) -> ZipFile2:
         """Copy the archive from cache."""
         log.debug(f"{self.banner}download (if newer): {self.args.python_url}")
@@ -115,14 +110,14 @@ class Bundler:
         self.fs_copy(src, dest)
         return archive or _archive(dest)
 
-    def from_download(self, dest: Path, archive: Optional[ZipFile2] = None) -> ZipFile2:
+    def from_download(self, dest: Path, archive: ZipFile2 | None = None) -> ZipFile2:
         """Download archive."""
         log.debug(f"{self.banner}download (fresh): {self.args.python_url} to {dest}")
         if self.args.for_real:
             download(self.args.python_url, dest)
         return archive or _archive(dest)
 
-    def setup_temp(self) -> Tuple[Path, Optional[ZipFile2]]:
+    def setup_temp(self) -> tuple[Path, ZipFile2 | None]:
         """Setup a temporary file and construct a ZipFile (if non-dry-run)."""
         archive = None
         if self.args.for_real:
@@ -147,7 +142,7 @@ class Bundler:
 
     def process_file(
         self, path: Path, module: Pkg, main: Pkg
-    ) -> Tuple[str, Union[bytes, bytearray], Pkg]:
+    ) -> tuple[str, bytes | bytearray, Pkg]:
         """Search for main module and compile `.py` files."""
         name, data = path.name, path.read_bytes()
         if not main and name in MAIN_FILES:
@@ -166,11 +161,11 @@ class Bundler:
     def zip_add(
         self,
         archive: ZipFile2,
-        include: Iterator[Tuple[Path, Set[str]]],
-        exclude: Set[Path],
+        include: Iterator[tuple[Path, set[str]]],
+        exclude: set[Path],
     ) -> Pkg:
         """Add files to `archive` while searching for `main` entry point."""
-        modules: Dict[Path, Pkg] = {}
+        modules: dict[Path, Pkg] = {}
         main: Pkg = tuple()
         pkgs = ("Lib", "site-packages")
         for path, files in include:
@@ -216,7 +211,7 @@ class Bundler:
             sys.exit(1)
 
         assert receipt.is_valid()
-        data: Union[str, bytes, bytearray]
+        data: str | bytes | bytearray
 
         dest = PATH_RECEIPT
         data = str(receipt)

@@ -5,8 +5,6 @@
 from __future__ import annotations
 from os import environ as ENV
 from pathlib import Path
-from typing import List
-from typing import Optional
 import json
 import logging
 import sys
@@ -80,7 +78,7 @@ def self_update(path: Path) -> int:
     return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """Main entry point for self-updater."""
     args = argv or sys.argv[1:]
     if "--self-update" in args:

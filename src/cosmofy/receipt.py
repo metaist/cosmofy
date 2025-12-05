@@ -6,8 +6,6 @@ from datetime import datetime
 from datetime import timezone
 from pathlib import Path
 from typing import Callable
-from typing import Dict
-from typing import List
 from urllib.request import urlopen
 import dataclasses
 import hashlib
@@ -87,7 +85,7 @@ class Receipt:
         """Return `json`-encoded string."""
         return json.dumps(self.asdict())
 
-    def asdict(self) -> Dict[str, str]:
+    def asdict(self) -> dict[str, str]:
         """Return `dict` representation of the receipt."""
         return {
             "$schema": self.schema,
@@ -106,10 +104,10 @@ class Receipt:
         return not sum((v for v in issues.values()), [])
 
     @staticmethod
-    def find_issues(data: Dict[str, str]) -> Dict[str, List[str]]:
+    def find_issues(data: dict[str, str]) -> dict[str, list[str]]:
         """Return field names by issue that occurred during validation."""
-        issues: Dict[str, List[str]] = {"missing": [], "unknown": [], "malformed": []}
-        rules: Dict[str, Checker] = {
+        issues: dict[str, list[str]] = {"missing": [], "unknown": [], "malformed": []}
+        rules: dict[str, Checker] = {
             "$schema": lambda v: v == RECEIPT_SCHEMA,
             "kind": lambda v: v in RECEIPT_KIND,
             "date": lambda v: bool(RECEIPT_DATE.match(v)),
@@ -119,7 +117,7 @@ class Receipt:
             "release_url": lambda v: bool(v.strip()),
             "version": lambda v: bool(v.strip()),
         }
-        embedded: Dict[str, Checker] = {
+        embedded: dict[str, Checker] = {
             "hash": lambda v: isinstance(v, str),
             "version": lambda v: isinstance(v, str),
         }
@@ -149,7 +147,7 @@ class Receipt:
         return self.update(**values)
 
     @staticmethod
-    def from_dict(data: Dict[str, str]) -> Receipt:
+    def from_dict(data: dict[str, str]) -> Receipt:
         """Return receipt from a `dict`."""
         issues = Receipt.find_issues(data)
         if sum((v for v in issues.values()), []):

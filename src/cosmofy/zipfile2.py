@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import datetime
 from fnmatch import fnmatch
 from operator import attrgetter
-from typing import Union
 from zipfile import ZIP_DEFLATED
 from zipfile import ZipFile
 from zipfile import ZipInfo
@@ -39,7 +38,7 @@ class ZipFile2(ZipFile):
     def add_file(
         self,
         path: str,
-        data: Union[bytearray, bytes, str],
+        data: bytearray | bytes | str,
         mode: int = 0o644,
         date: datetime = now,
     ) -> ZipFile2:
@@ -52,7 +51,7 @@ class ZipFile2(ZipFile):
         return self
 
     # https://github.com/python/cpython/commit/659eb048cc9cac73c46349eb29845bc5cd630f09
-    def remove(self, member: Union[str, ZipInfo]) -> ZipFile2:
+    def remove(self, member: str | ZipInfo) -> ZipFile2:
         """Remove a file from the archive. The archive must be open with mode 'a'"""
         if self.mode != "a":
             raise RuntimeError("remove() requires mode 'a'")
