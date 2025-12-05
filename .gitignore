@@ -1,17 +1,19 @@
-.env
-
 # general
 _ignore*
 _seed.py
+.env
 .venv*
 *.db
 
 # editors
+.DS_Store
 .idea
 .vim
 .vscode
 *.code-workspace
-.DS_Store
+
+# run
+__pycache__
 
 # test
 .coverage
@@ -21,14 +23,6 @@ _seed.py
 /htmlcov
 
 # build
-__pycache__
-.pdm-python
 *.egg-info
 /build
 /dist
-node_modules/
-
-# rye
-.python-version
-requirements-dev.lock
-requirements.lock
