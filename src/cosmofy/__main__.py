@@ -47,18 +47,6 @@ def main(argv: list[str] | None = None) -> int:
         print(USAGE)
         return 0
 
-    if not args.add:
-        log.error("You must specify at least one path to add.")
-        print(short_usage)
-        return 1
-
-    if args.clone and not args.cosmo:
-        log.error(
-            "You cannot use --clone outside of a Cosmopolitan build. "
-            "See https://github.com/metaist/cosmofy#install"
-        )
-        return 1
-
     Bundler(args).run()
     return 0
 

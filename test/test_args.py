@@ -13,14 +13,14 @@ from cosmofy.args import Args
 
 def test_empty() -> None:
     """Empty args."""
-    assert Args.parse([]) == Args()
+    assert Args.parse([]) == Args(download=True)
 
 
 def test_basic() -> None:
     """Basic flags."""
     assert Args.parse(
-        split("--clone --args '-m foo' --output bar/baz src/repo")
-    ) == Args(clone=True, args="-m foo", output=Path("bar/baz"), add=["src/repo"])
+        split("--download --args '-m foo' --output bar/baz src/repo")
+    ) == Args(download=True, args="-m foo", output=Path("bar/baz"), add=["src/repo"])
 
 
 def test_dry_run() -> None:
@@ -34,12 +34,21 @@ def test_dry_run() -> None:
     assert not args.for_real
 
 
+def test_default_input() -> None:
+    """Default input."""
+    assert Args.parse(split("--input foo")) == Args(
+        input=Path("foo"), output=Path("foo")
+    )
+    assert Args.parse(split("--cosmo")) == Args(cosmo=True, clone=True)
+    assert Args.parse(split("")) == Args(download=True)
+
+
 def test_disable_cache() -> None:
     """Disable cache."""
-    assert Args.parse(split("--cache 0")) == Args(cache=None)
-    assert Args.parse(split("--cache false")) == Args(cache=None)
-    assert Args.parse(split("--cache False")) == Args(cache=None)
-    assert Args.parse(split("--cache FALSE")) == Args(cache=None)
+    assert Args.parse(split("--cache 0")) == Args(cache=None, download=True)
+    assert Args.parse(split("--cache false")) == Args(cache=None, download=True)
+    assert Args.parse(split("--cache False")) == Args(cache=None, download=True)
+    assert Args.parse(split("--cache FALSE")) == Args(cache=None, download=True)
 
 
 def test_self_updater() -> None:
@@ -47,10 +56,10 @@ def test_self_updater() -> None:
     release = "http://example.com/foo"
     receipt = "http://example.com/foo.json"
     assert Args.parse(split(f"--release-url {release}")) == Args(
-        release_url=release, receipt_url=receipt
+        download=True, release_url=release, receipt_url=receipt
     )
     assert Args.parse(split(f"--receipt-url {receipt}")) == Args(
-        release_url=release, receipt_url=receipt
+        download=True, release_url=release, receipt_url=receipt
     )
     with pytest.raises(ValueError):
         Args.parse(split("--release-version 0.1.0"))  # missing url

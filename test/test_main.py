@@ -11,7 +11,6 @@ from cosmofy.__main__ import main
 
 def test_arg_bad() -> None:
     """Bad args."""
-    assert main(split("cosmofy")) != 0, "missing paths"
     assert main(split("cosmofy --unknown")) != 0, "unknown arg"
     assert main(split("cosmofy src/cosmofy --clone")) != 0, "--clone without --cosmo"
 

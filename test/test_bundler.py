@@ -116,6 +116,9 @@ def test_setup_temp() -> None:
 
 def test_setup_archive() -> None:
     """Setup archive."""
+    # file (dry run)
+    assert Bundler(Args(dry_run=True, input=Path("fake"))).setup_archive()
+
     # clone (dry run)
     assert Bundler(Args(dry_run=True, cosmo=True, clone=True)).setup_archive()
 

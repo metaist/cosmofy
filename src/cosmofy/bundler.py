@@ -130,7 +130,9 @@ class Bundler:
     def setup_archive(self) -> ZipFile2:
         """Clone, copy from cache, or download the archive."""
         temp, archive = self.setup_temp()
-        if self.args.clone:
+        if self.args.input:
+            archive = archive or _archive(self.args.input)
+        elif self.args.clone:
             paths = [".args", f"{PATH_COSMOFY}/*"]
             self.fs_copy(Path(sys.executable), temp)
             archive = self.zip_remove(archive or _archive(temp), *paths)

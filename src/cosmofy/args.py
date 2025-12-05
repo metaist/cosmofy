@@ -9,7 +9,10 @@ import logging
 
 log = logging.getLogger(__name__)
 
-DEFAULT_PYTHON_URL = "https://cosmo.zip/pub/cosmos/bin/python"
+# DEFAULT_PYTHON_URL = "https://cosmo.zip/pub/cosmos/bin/python"
+DEFAULT_PYTHON_URL = (
+    "https://github.com/metaist/cosmofy/releases/latest/download/cosmofy"
+)
 """Default URL to download python from."""
 
 COSMOFY_PYTHON_URL = ENV.get("COSMOFY_PYTHON_URL", "")
@@ -33,9 +36,9 @@ USAGE
 
   cosmofy
     [--help] [--version] [--debug] [--dry-run] [--self-update]
-    [--python-url URL] [--cache PATH] [--clone]
+    [--input PATH | --clone | --download URL] [--cache PATH]
     [--output PATH] [--args STRING]
-    <add>... [--exclude GLOB]... [--remove GLOB]...
+    [<add>...] [--exclude GLOB]... [--remove GLOB]...
     [--receipt PATH] [--receipt-url URL] [--release-url URL]
     [--release-version STRING]
 
@@ -47,10 +50,23 @@ GENERAL
   -n, --dry-run     Do not make any file system changes.
   --self-update     Update `cosmofy` to the latest version.
 
-CACHE
+INPUT
+
+  -i PATH, --input PATH
+    Start with an existing file.
+
+  --clone
+    Start with a copy of the current executable (Cosmopolitan build only).
+    In a Cosmopolitan build, this is the default.
+
+  --download
+    Start with Cosmopolitan Python from `--python-url`.
+    In a non-Cosmopolitan build, this is the default.
 
   --python-url URL
-    URL from which to download Cosmopolitan Python.
+    URL from which to download Cosmopolitan Python. By default, we download
+    the latest cosmofy executable, but you can also get a fresh Cosmopolitan
+    Python from https://cosmo.zip/pub/cosmos/bin/python
     [default: {DEFAULT_PYTHON_URL}]
     [env: COSMOFY_PYTHON_URL={COSMOFY_PYTHON_URL}]
 
@@ -59,10 +75,6 @@ CACHE
     Use `false` or `0` to disable caching.
     [default: {str(DEFAULT_CACHE_DIR).replace(str(Path.home()), '~')}]
     [env: COSMOFY_CACHE_DIR={COSMOFY_CACHE_DIR}]
-
-  --clone
-    Obtain python by cloning `cosmofy` and removing itself instead of
-    downloading it from `--python-url`.
 
 OUTPUT
 
@@ -86,7 +98,7 @@ FILES
     https://github.com/metaist/cosmofy#supported-python-cli
 
   --add GLOB, <add>
-    At least one glob-like patterns to add. Folders are recursively added.
+    One or more glob-like patterns to add. Folders are recursively added.
     Files ending in `.py` will be compiled.
 
   -x GLOB, --exclude GLOB
@@ -169,16 +181,22 @@ class Args:
         """Set dry_run."""
         self.dry_run = not value
 
-    # cache
+    # input
+
+    input: Path | None = None
+    """Existing file to start with."""
+
+    clone: bool = False
+    """Whether to clone the current executable."""
+
+    download: bool = False
+    """Whether to download python."""
 
     python_url: str = COSMOFY_PYTHON_URL or DEFAULT_PYTHON_URL
     """URL from which to download Cosmopolitan Python."""
 
     cache: Path | None = Path(COSMOFY_CACHE_DIR or DEFAULT_CACHE_DIR)
     """Directory for caching downloads."""
-
-    clone: bool = False
-    """Whether to clone `cosmofy` to get python."""
 
     # output
 
@@ -225,6 +243,7 @@ class Args:
         args = Args()
         alias = {
             "-h": "--help",
+            "-i": "--input",
             "-n": "--dry-run",
             "-o": "--output",
             "-x": "--exclude",
@@ -243,6 +262,7 @@ class Args:
                 "--clone",
                 "--cosmo",
                 "--debug",
+                "--download",
                 "--dry-run",
                 "--help",
                 "--version",
@@ -262,7 +282,7 @@ class Args:
                 setattr(args, prop, argv.pop(0))
 
             # path
-            elif arg in ["--cache", "--output", "--receipt"]:
+            elif arg in ["--input", "--cache", "--output", "--receipt"]:
                 if not argv:
                     raise ValueError(f"Expected argument for option: {arg}")
                 setattr(args, prop, Path(argv.pop(0)))
@@ -276,6 +296,22 @@ class Args:
             # unknown
             else:
                 raise ValueError(f"Unknown option: {arg}")
+
+        # input
+        if not args.input and not args.clone and not args.download:
+            if args.cosmo:
+                args.clone = True
+            else:
+                args.download = True
+
+        if args.clone and not args.cosmo:
+            raise ValueError(
+                "You cannot use --clone outside of a Cosmopolitan build. "
+                "See https://github.com/metaist/cosmofy#install"
+            )
+
+        if args.input and not args.output:
+            args.output = args.input
 
         # cache
         if args.cache and args.cache.name.lower() in ["0", "false"]:
