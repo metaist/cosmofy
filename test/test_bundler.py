@@ -4,6 +4,7 @@
 from pathlib import Path
 from typing import Iterator
 from unittest.mock import MagicMock
+from unittest.mock import patch
 from zipfile import ZipInfo
 import io
 import os
