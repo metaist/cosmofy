@@ -80,7 +80,7 @@ OUTPUT
 
   -o PATH, --output PATH
     Path to output file.
-    [default: `<main_module>.com`]
+    [default: `<main_module>`]
 
     `<main_module>` is the first module with a `__main__.py` or file with an
     `if __name__ == "__main__"` line.

@@ -275,7 +275,7 @@ class Bundler:
         elif main[-1] == "__init__":
             main = main[:-1]
 
-        output = self.args.output or Path(f"{main[-1]}.com")
+        output = self.args.output or Path(main[-1])
         if archive.filename:
             self.fs_move_executable(Path(archive.filename), output)
         log.info(f"{self.banner}created: {output}")

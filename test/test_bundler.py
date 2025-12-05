@@ -251,11 +251,11 @@ def test_write_output() -> None:
     """Write output zip."""
     test = Bundler(Args(dry_run=True))
     with tempfile.NamedTemporaryFile() as f:
-        assert test.write_output(_archive(f.name), tuple()) == Path("out.com")
+        assert test.write_output(_archive(f.name), tuple()) == Path("out")
 
     archive = _archive(io.BytesIO())
-    assert test.write_output(archive, ("foo", "__init__")) == Path("foo.com")
-    assert test.write_output(archive, ("foo", "bar")) == Path("bar.com")
+    assert test.write_output(archive, ("foo", "__init__")) == Path("foo")
+    assert test.write_output(archive, ("foo", "bar")) == Path("bar")
 
 
 @patch("cosmofy.bundler.Receipt.from_path")
@@ -279,7 +279,7 @@ def test_write_receipt(_from_path: MagicMock) -> None:
 
 def test_run() -> None:
     """Run bundler."""
-    path = Path("out.com")
+    path = Path("out")
     test = Bundler(Args(dry_run=True))
     assert test.run() == path
 
