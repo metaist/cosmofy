@@ -19,7 +19,13 @@ curl -sSz $dest -o $dest -L https://github.com/metaist/cosmofy/releases/latest/d
 chmod +x $dest
 ```
 
-Windows: (PowerShell instructions coming soon)
+Windows:
+
+```powershell
+$dest = "$env:LOCALAPPDATA\cosmofy\cosmofy.exe"
+New-Item -ItemType Directory -Force -Path (Split-Path $dest)
+Invoke-WebRequest -Uri "https://github.com/metaist/cosmofy/releases/latest/download/cosmofy" -OutFile $dest
+```
 
 ## Examples
 
