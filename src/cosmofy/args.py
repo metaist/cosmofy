@@ -9,10 +9,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-# DEFAULT_PYTHON_URL = "https://cosmo.zip/pub/cosmos/bin/python"
-DEFAULT_PYTHON_URL = (
-    "https://github.com/metaist/cosmofy/releases/latest/download/cosmofy"
-)
+DEFAULT_PYTHON_URL = "https://cosmo.zip/pub/cosmos/bin/python"
 """Default URL to download python from."""
 
 COSMOFY_PYTHON_URL = ENV.get("COSMOFY_PYTHON_URL", "")
@@ -65,9 +62,7 @@ INPUT
     In a non-Cosmopolitan build, this is the default.
 
   --python-url URL
-    URL from which to download Cosmopolitan Python. By default, we download
-    the latest cosmofy executable, but you can also get a fresh Cosmopolitan
-    Python from https://cosmo.zip/pub/cosmos/bin/python
+    URL from which to download Cosmopolitan Python.
     [default: {DEFAULT_PYTHON_URL}]
     [env: COSMOFY_PYTHON_URL={COSMOFY_PYTHON_URL}]
 
