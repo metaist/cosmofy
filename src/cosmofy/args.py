@@ -15,6 +15,9 @@ DEFAULT_PYTHON_URL = "https://cosmo.zip/pub/cosmos/bin/python"
 COSMOFY_PYTHON_URL = ENV.get("COSMOFY_PYTHON_URL", "")
 """URL to download python from."""
 
+COSMOFY_NO_CACHE = ENV.get("COSMOFY_NO_CACHE", "")
+"""Whether to disable cache."""
+
 DEFAULT_CACHE_DIR = Path.home() / ".cache" / "cosmofy"
 """Default cache directory."""
 
@@ -66,10 +69,13 @@ INPUT
     [default: {DEFAULT_PYTHON_URL}]
     [env: COSMOFY_PYTHON_URL={COSMOFY_PYTHON_URL}]
 
-  --cache PATH
+  --no-cache
+    Do not read or save to the cache.
+    [env: COSMOFY_NO_CACHE={COSMOFY_NO_CACHE}]
+
+  --cache-dir PATH
     Directory in which to cache Cosmopolitan Python downloads.
-    Use `false` or `0` to disable caching.
-    [default: {str(DEFAULT_CACHE_DIR).replace(str(Path.home()), '~')}]
+    [default: {str(DEFAULT_CACHE_DIR).replace(str(Path.home()), "~")}]
     [env: COSMOFY_CACHE_DIR={COSMOFY_CACHE_DIR}]
 
 OUTPUT
@@ -194,7 +200,10 @@ class Args:
     python_url: str = COSMOFY_PYTHON_URL or DEFAULT_PYTHON_URL
     """URL from which to download Cosmopolitan Python."""
 
-    cache: Path | None = Path(COSMOFY_CACHE_DIR or DEFAULT_CACHE_DIR)
+    no_cache: bool = COSMOFY_NO_CACHE.lower() in ["1", "true"]
+    """Whether to disable cache."""
+
+    cache_dir: Path = Path(COSMOFY_CACHE_DIR or DEFAULT_CACHE_DIR)
     """Directory for caching downloads."""
 
     # output
@@ -237,14 +246,65 @@ class Args:
             self.receipt or self.receipt_url or self.release_url or self.release_version
         )
 
+    def set_prop(self, arg: str, argv: list[str]) -> list[str]:
+        prop = arg[2:].replace("-", "_")
+
+        # bool
+        if arg in [
+            "--cosmo",
+            "--help",
+            "--version",
+            "--dry-run",
+            "--no-cache",
+        ]:
+            setattr(self, prop, True)
+
+        # int
+        elif arg in ["--quiet", "--verbose"]:
+            setattr(self, prop, getattr(self, prop) + 1)
+
+        # str
+        elif arg in [
+            "--args",
+            "--python-url",
+            "--receipt-url",
+            "--release-url",
+            "--release-version",
+        ]:
+            if not argv:
+                raise ValueError(f"Expected argument for option: {arg}")
+            setattr(self, prop, argv.pop(0))
+
+        # path
+        elif arg in ["--input", "--cache-dir", "--output", "--script", "--receipt"]:
+            if not argv:
+                raise ValueError(f"Expected argument for option: {arg}")
+            setattr(self, prop, Path(argv.pop(0)))
+
+        # list[str]
+        elif arg in ["--add", "--exclude", "--remove"]:
+            if not argv:
+                raise ValueError(f"Expected argument for option: {arg}")
+            getattr(self, prop).append(argv.pop(0))
+
+        # unknown
+        else:
+            raise ValueError(f"Unknown option: {arg}")
+        return argv
+
     @staticmethod
     def parse(argv: list[str]) -> Args:
         args = Args()
-        alias = {
+        alias: dict[str, str] = {
             "-h": "--help",
+            # i/o
             "-i": "--input",
-            "-n": "--dry-run",
             "-o": "--output",
+            # logs
+            "-q": "--quiet",
+            "-v": "--verbose",
+            # files
+            "-a": "--add",
             "-x": "--exclude",
             "--rm": "--remove",
         }
@@ -252,73 +312,18 @@ class Args:
             if argv[0].startswith("-"):
                 arg = argv.pop(0)
                 arg = alias.get(arg, arg)
+
+            if arg.startswith("--"):
+                argv = args.set_prop(arg, argv)
             else:
-                arg = "--add"
-            prop = arg[2:].replace("-", "_")
-
-            # bool
-            if arg in [
-                "--clone",
-                "--cosmo",
-                "--debug",
-                "--download",
-                "--dry-run",
-                "--help",
-                "--version",
-            ]:
-                setattr(args, prop, True)
-
-        # int
-        elif arg in ["--quiet", "--verbose"]:
-            setattr(self, prop, getattr(self, prop) + 1)
-
-            # str
-            elif arg in [
-                "--args",
-                "--python-url",
-                "--receipt-url",
-                "--release-url",
-                "--release-version",
-            ]:
-                if not argv:
-                    raise ValueError(f"Expected argument for option: {arg}")
-                setattr(args, prop, argv.pop(0))
-
-            # path
-            elif arg in ["--input", "--cache", "--output", "--receipt"]:
-                if not argv:
-                    raise ValueError(f"Expected argument for option: {arg}")
-                setattr(args, prop, Path(argv.pop(0)))
-
-            # list[str]
-            elif arg in ["--add", "--exclude", "--remove"]:
-                if not argv:
-                    raise ValueError(f"Expected argument for option: {arg}")
-                getattr(args, prop).append(argv.pop(0))
-
-            # unknown
-            else:
-                raise ValueError(f"Unknown option: {arg}")
+                for _arg in arg[1:]:
+                    arg = f"-{_arg}"
+                    arg = alias.get(arg, arg)
+                    argv = args.set_prop(arg, argv)
 
         # input
-        if not args.input and not args.clone and not args.download:
-            if args.cosmo:
-                args.clone = True
-            else:
-                args.download = True
-
-        if args.clone and not args.cosmo:
-            raise ValueError(
-                "You cannot use --clone outside of a Cosmopolitan build. "
-                "See https://github.com/metaist/cosmofy#install"
-            )
-
         if args.input and not args.output:
             args.output = args.input
-
-        # cache
-        if args.cache and args.cache.name.lower() in ["0", "false"]:
-            args.cache = None
 
         # self-updater
         if args.add_updater and not args.receipt_url and not args.release_url:
