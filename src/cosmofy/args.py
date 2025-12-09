@@ -298,17 +298,16 @@ class Args:
             "--rm": "--remove",
         }
         while argv:
-            if argv[0].startswith("-"):
-                arg = argv.pop(0)
-                arg = alias.get(arg, arg)
-
+            arg = argv.pop(0)
             if arg.startswith("--"):
                 argv = args.set_prop(arg, argv)
-            else:
+            elif arg.startswith("-"):
                 for _arg in arg[1:]:
                     arg = f"-{_arg}"
                     arg = alias.get(arg, arg)
                     argv = args.set_prop(arg, argv)
+            else:
+                raise ValueError(f"Unknown option: {arg}")
 
         # input
         if args.input and not args.output:
