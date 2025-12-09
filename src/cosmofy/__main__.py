@@ -31,10 +31,16 @@ def main(argv: list[str] | None = None) -> int:
         print(short_usage)
         return 1
 
-    if args.debug:
+    level = args.verbose - args.quiet
+    if level < 0:
+        logging.disable(logging.CRITICAL)
+    elif level > 0:
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(log_debug)
+        fmt = log_debug
+        if level > 1:
+            fmt = log_verbose
+        formatter = logging.Formatter(fmt)
         for handler in root_logger.handlers:
             handler.setFormatter(formatter)
         log.debug(args)

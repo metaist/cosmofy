@@ -46,9 +46,10 @@ GENERAL
 
   -h, --help        Show this help message and exit.
   --version         Show program version and exit.
-  --debug           Show debug messages.
-  -n, --dry-run     Do not make any file system changes.
   --self-update     Update `cosmofy` to the latest version.
+  -q, --quiet...    Show quiet output.
+  -v, --verbose...  Show verbose output.
+  --dry-run         Do not make any file system changes.
 
 INPUT
 
@@ -162,11 +163,14 @@ class Args:
     version: bool = False
     """Whether to show version."""
 
-    debug: bool = False
-    """Whether to show debug messages."""
-
     cosmo: bool = False
     """(internal) Whether we are running inside a Cosmopolitan build."""
+
+    quiet: int = 0
+    """How quiet should the output be?"""
+
+    verbose: int = 0
+    """How verbose should the output be?"""
 
     dry_run: bool = False
     """Whether we should suppress any file-system operations."""
@@ -268,6 +272,10 @@ class Args:
                 "--version",
             ]:
                 setattr(args, prop, True)
+
+        # int
+        elif arg in ["--quiet", "--verbose"]:
+            setattr(self, prop, getattr(self, prop) + 1)
 
             # str
             elif arg in [
