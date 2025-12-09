@@ -119,14 +119,11 @@ def test_setup_archive() -> None:
     # file (dry run)
     assert Bundler(Args(dry_run=True, input=Path("fake"))).setup_archive()
 
-    # clone (dry run)
-    assert Bundler(Args(dry_run=True, cosmo=True, clone=True)).setup_archive()
+    # fresh (dry run)
+    assert Bundler(Args(dry_run=True, no_cache=True)).setup_archive()
 
     # cache (dry run)
     assert Bundler(Args(dry_run=True)).setup_archive()
-
-    # fresh (dry run)
-    assert Bundler(Args(dry_run=True, cache=None)).setup_archive()
 
 
 def test_process() -> None:

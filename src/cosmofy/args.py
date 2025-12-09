@@ -35,12 +35,15 @@ USAGE = f"""cosmofy: Cosmopolitan Python Bundler
 USAGE
 
   cosmofy
-    [--help] [--version] [--debug] [--dry-run] [--self-update]
-    [--input PATH | --clone | --download URL] [--cache PATH]
-    [--output PATH] [--args STRING]
-    [<add>...] [--exclude GLOB]... [--remove GLOB]...
-    [--receipt PATH] [--receipt-url URL] [--release-url URL]
-    [--release-version STRING]
+    [--help | --version][--self-update]
+    [--quiet...][--verbose...][--dry-run]
+    [--input PATH][--python-url URL]
+    [--no-cache][--cache-dir PATH]
+    [--output PATH]
+    [--script PATH][--args STRING]
+    [--add GLOB][--exclude GLOB][--remove GLOB]
+    [--receipt PATH][--receipt-url URL]
+    [--release-url URL][--release-version STRING]
 
 GENERAL
 
@@ -55,14 +58,6 @@ INPUT
 
   -i PATH, --input PATH
     Start with an existing file.
-
-  --clone
-    Start with a copy of the current executable (Cosmopolitan build only).
-    In a Cosmopolitan build, this is the default.
-
-  --download
-    Start with Cosmopolitan Python from `--python-url`.
-    In a non-Cosmopolitan build, this is the default.
 
   --python-url URL
     URL from which to download Cosmopolitan Python.
@@ -190,12 +185,6 @@ class Args:
 
     input: Path | None = None
     """Existing file to start with."""
-
-    clone: bool = False
-    """Whether to clone the current executable."""
-
-    download: bool = False
-    """Whether to download python."""
 
     python_url: str = COSMOFY_PYTHON_URL or DEFAULT_PYTHON_URL
     """URL from which to download Cosmopolitan Python."""

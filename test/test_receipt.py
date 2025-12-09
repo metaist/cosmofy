@@ -121,13 +121,17 @@ def test_from_url(_urlopen: MagicMock, _load: MagicMock) -> None:
 
 @patch("cosmofy.receipt.hashlib.new")
 @patch("cosmofy.receipt.Path.read_bytes")
+@patch("cosmofy.receipt.Path.exists")
 @patch("cosmofy.receipt.subprocess.run")
-def test_from_path(_run: MagicMock, _read_bytes: MagicMock, _new: MagicMock) -> None:
+def test_from_path(
+    _run: MagicMock, _read_bytes: MagicMock, _exists: MagicMock, _new: MagicMock
+) -> None:
     """Receipt with hash and version."""
     fake_hash = "0123456789abcdef"
     fake_ver = b"0.1.2"
     _new.return_value.hexdigest.return_value = fake_hash
     _read_bytes.return_value = b"fake content"
+    _exists.return_value = True
     _run.return_value.stdout = fake_ver
     assert Receipt.from_path(Path("fake")) == Receipt(hash=fake_hash, version="0.1.2")
     assert Receipt.from_path(Path("fake"), version="1.2.3") == Receipt(

@@ -49,6 +49,21 @@ def datestr(date: datetime) -> str:
     return date.astimezone(timezone.utc).isoformat()[:19] + "Z"
 
 
+def get_version(path: Path, default: str = "") -> str:
+    """Return `path` version or `default` if it doesn't exist.
+
+    >>> get_version(Path("fake"), "0.0.0")
+    '0.0.0'
+    """
+    version = default
+    if path.exists():
+        cmd = f"{path.resolve()} --version"
+        out = subprocess.run(cmd, capture_output=True, check=True, shell=True)
+        if match := RE_VERSION.search(out.stdout):
+            version = match.group().decode("utf-8")
+    return version
+
+
 @dataclasses.dataclass
 class Receipt:
     """Asset metadata."""
@@ -168,8 +183,5 @@ class Receipt:
         """Return hash and version for a `path`."""
         digest = hashlib.new(algo, path.read_bytes()).hexdigest()
         if not version:
-            cmd = (f"{path.resolve()} --version",)
-            out = subprocess.run(cmd, capture_output=True, check=True, shell=True)
-            if match := RE_VERSION.search(out.stdout):
-                version = match.group().decode("utf-8")
+            version = get_version(path)
         return Receipt(algo=algo, hash=digest, version=version)

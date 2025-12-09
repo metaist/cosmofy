@@ -12,17 +12,17 @@ from cosmofy.__main__ import main
 def test_arg_bad() -> None:
     """Bad args."""
     assert main(split("cosmofy --unknown")) != 0, "unknown arg"
-    assert main(split("cosmofy src/cosmofy --clone")) != 0, "--clone without --cosmo"
 
 
 def test_arg_general() -> None:
     """General args."""
-    assert main(split("cosmofy --debug --version")) == 0, "--version"
-    assert main(split("cosmofy --debug --help")) == 0, "--help"
+    assert main(split("cosmofy --version")) == 0, "--version"
+    assert main(split("cosmofy --quiet --version")) == 0, "--version"
+    assert main(split("cosmofy --verbose --help")) == 0, "--help"
 
 
 @patch("cosmofy.__main__.Bundler.run")
 def test_run(_run: MagicMock) -> None:
     """Run the bundler."""
-    assert main(split("cosmofy src/cosmofy --dry-run")) == 0
+    assert main(split("cosmofy --dry-run -vv")) == 0
     _run.assert_called_once()

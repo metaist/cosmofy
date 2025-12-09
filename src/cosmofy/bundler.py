@@ -132,14 +132,10 @@ class Bundler:
         temp, archive = self.setup_temp()
         if self.args.input:
             archive = archive or _archive(self.args.input)
-        elif self.args.clone:
-            paths = [".args", f"{PATH_COSMOFY}/*"]
-            self.fs_copy(Path(sys.executable), temp)
-            archive = self.zip_remove(archive or _archive(temp), *paths)
-        elif self.args.cache:
-            archive = self.from_cache(self.args.cache / "python", temp, archive)
-        else:
+        elif self.args.no_cache:
             archive = self.from_download(temp, archive)
+        else:
+            archive = self.from_cache(self.args.cache_dir / "python", temp, archive)
         return archive
 
     def process_file(
