@@ -2,12 +2,245 @@
 
 # std
 from __future__ import annotations
+from dataclasses import dataclass
 from os import environ as ENV
 from pathlib import Path
+from typing import Any
+from typing import Callable
+from typing import TypeVar
 import dataclasses
 import logging
 
+log_normal = "%(levelname)s: %(message)s"
+log_debug = "%(name)s.%(funcName)s: %(levelname)s: %(message)s"
+log_verbose = " %(filename)s:%(lineno)s %(funcName)s(): %(levelname)s: %(message)s"
+logging.basicConfig(level=logging.INFO, format=log_normal)
 log = logging.getLogger(__name__)
+
+T = TypeVar("T", bound="GlobalArgs")
+
+
+# Argument Actions
+# These are the actions that can be taken after parsing an argument.
+
+ArgAction = (
+    Callable[["GlobalArgs", "Arg", str], "GlobalArgs"]
+    | Callable[["GlobalArgs", "Arg", list[str]], "GlobalArgs"]
+)
+
+
+def append(ctx: T, arg: Arg, val: str) -> T:
+    getattr(ctx, arg.prop_name).append(arg.kind(val))
+    return ctx
+
+
+def extend(ctx: T, arg: Arg, vals: list[str]) -> T:
+    getattr(ctx, arg.prop_name).extend(arg.kind(v) for v in vals)
+    return ctx
+
+
+def count(ctx: T, arg: Arg, _: str) -> T:
+    setattr(ctx, arg.prop_name, getattr(ctx, arg.prop_name) + 1)
+    return ctx
+
+
+def store(ctx: T, arg: Arg, val: str) -> T:
+    setattr(ctx, arg.prop_name, arg.kind(val))
+    return ctx
+
+
+def store_bool(ctx: T, arg: Arg, val: str) -> T:
+    setattr(ctx, arg.prop_name, val.lower() in ["1", "on", "t", "true", "y", "yes"])
+    return ctx
+
+
+@dataclass
+class Arg:
+    """Represents an argument that can be parsed."""
+
+    long: str
+    short: str = ""
+    prop: str = ""
+    kind: type = bool
+    action: ArgAction = store_bool
+    required: bool = False
+
+    @property
+    def is_positional(self) -> bool:
+        return not self.long.startswith("--")
+
+    @property
+    def prop_name(self) -> str:
+        return self.prop if self.prop else self.long.replace("--", "").replace("-", "_")
+
+
+global_options = """\
+Global options:
+  -h, --help                show this help message
+  -q, --quiet...            show quiet output
+  -v, --verbose...          show verbose output
+      --dry-run             do not make any filesystem changes
+""".rstrip()
+
+global_arglist: list[Arg] = [
+    Arg("--help", "-h"),
+    Arg("--quiet", "-q", kind=int, action=count),
+    Arg("--verbose", "-v", kind=int, action=count),
+    Arg("--dry-run"),
+]
+
+
+def short_usage(usage: str) -> str:
+    """Extract the usage string."""
+    beg = usage.find("Usage:")
+    end = usage.find("\n\n", beg) + 2
+    return "\n" + usage[beg:end] + "For more information, try --help"
+
+
+def setup_logger(args: GlobalArgs) -> None:
+    """Ensure logging is configured properly."""
+    level = args.verbosity
+    if level < 0:
+        logging.disable(logging.CRITICAL)
+    elif level > 0:
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.DEBUG)
+        fmt = log_verbose if level > 1 else log_debug
+        formatter = logging.Formatter(fmt)
+        for handler in root_logger.handlers:
+            handler.setFormatter(formatter)
+
+
+@dataclass
+class GlobalArgs:
+    help: bool = False
+    """Whether to show usage."""
+
+    quiet: int = 0
+    """How quiet should the output be?"""
+
+    verbose: int = 0
+    """How verbose should the output be?"""
+
+    @property
+    def verbosity(self) -> int:
+        return self.verbose - self.quiet
+
+    dry_run: bool = False
+    """Whether we should suppress any file-system operations."""
+
+    @property
+    def for_real(self) -> bool:
+        """Internal value for the opposite of `dry_run`."""
+        return not self.dry_run
+
+    @for_real.setter
+    def for_real(self, value: bool) -> None:
+        """Set `dry_run`."""
+        self.dry_run = not value
+
+    def show_help(self, usage: str, log: logging.Logger) -> bool:
+        """Return `True` if `--help` was called."""
+        setup_logger(self)
+        log.debug(self)
+        if self.help:
+            print(usage.strip())
+            return True
+        return False
+
+
+def parse_optional(
+    ctx: GlobalArgs,
+    opt: str,
+    optional: dict[str, Arg],
+    argv: list[str],
+) -> tuple[bool, list[str]]:
+    """Return whether any option was parsed and remaining `argv` to parse."""
+    changed = False
+    alias = {a.short: a.long for a in optional.values() if a.short}
+
+    if "=" in opt:
+        opt, val = opt.split("=", 1)
+        argv.insert(0, val)
+
+    if opt.startswith("-") and not opt.startswith("--"):  # expand
+        expand = [alias.get(f"-{o}", f"-{o}") for o in opt[1:]]
+        argv = expand + argv
+        opt = argv.pop(0)
+
+    if opt.startswith("--"):
+        arg = optional.get(opt)
+        if not arg:
+            raise ValueError(f"Unknown option: {opt}")
+
+        action = arg.action
+        val = "true"
+        if action in (append, extend, store):
+            if not argv:
+                raise ValueError(f"Missing argument for option: {arg}")
+            elif action is extend:
+                vals = [val]
+                while argv and not argv[0].startswith("-"):
+                    vals.append(argv.pop(0))
+                action(ctx, arg, vals)
+            else:
+                action(ctx, arg, argv.pop(0))
+        else:  # val is str
+            action(ctx, arg, val)  # type: ignore
+        changed = True
+
+    return changed, argv
+
+
+def parse_positional(
+    ctx: GlobalArgs, val: str, positional: list[Arg], argv: list[str]
+) -> tuple[list[Arg], list[str]]:
+    """Return remaining `positional` and `argv`."""
+
+    if not positional:
+        raise ValueError(f"Unknown option: {val}")
+
+    arg = positional.pop(0)
+    if arg.action is extend:
+        vals = [val]
+        while argv and not argv[0].startswith("-"):
+            vals.append(argv.pop(0))
+        extend(ctx, arg, vals)
+    else:
+        arg.action(ctx, arg, val)
+
+    return positional, argv
+
+
+def parse_args(
+    ctx: T,
+    argv: list[str],
+    arglist: list[Arg],
+    *,
+    commands: dict[str, Any] | None = None,
+) -> tuple[T, list[str]]:
+    """Return parsed args and any remaining `argv`."""
+    commands = commands or {}
+    optional = {a.long: a for a in arglist}
+    positional: list[Arg] = [a for a in arglist if a.is_positional]
+
+    while argv:
+        val = argv.pop(0)
+        changed, argv = parse_optional(ctx, val, optional, argv)
+
+        if not changed:
+            positional, argv = parse_positional(ctx, val, positional, argv)
+            if val in commands:
+                break
+
+    required = [req for req in positional if req.required]
+    if any(required) and not ctx.help:  # still remain
+        raise ValueError(
+            f"Missing required values for: {', '.join(f'<{a.long}>' for a in required)}"
+        )
+
+    return ctx, argv
+
 
 DEFAULT_PYTHON_URL = "https://cosmo.zip/pub/cosmos/bin/python"
 """Default URL to download python from."""
