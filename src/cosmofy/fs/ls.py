@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# TODO When mypy learns that `zipfile.Path.at` exists, remove next line.
+# mypy: disable-error-code="attr-defined"
 
 # std
 from __future__ import annotations
@@ -8,21 +10,24 @@ from dataclasses import field
 from dataclasses import replace
 from datetime import datetime
 from datetime import timedelta
-from fnmatch import fnmatchcase
 from operator import attrgetter
+from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
+from zipfile import ZipInfo
+from zipfile import Path as ZipPath
 import logging
 import stat
 import sys
-import zipfile
 
 # pkg
+from . import expand_glob
 from . import fs_common_arglist
 from . import fs_common_args
 from . import FsCommonArgs
+from . import shell_match
 from .__main__ import FsArgs
 from ..args import append
 from ..args import Arg
@@ -42,8 +47,8 @@ List contents of a Cosmopolitan bundle.
 Usage: cosmofy fs ls <bundle> [options] [<file>...]
 
 Arguments:
-  <file>...                 one or more file patterns to show
 {fs_common_args}
+  <file>...                 one or more file patterns to show
 
 Filter options:
   -a, --all                 show entries whose name starts with `.`
@@ -161,25 +166,10 @@ def ls_time(dt: datetime, *, now: datetime | None = None) -> str:
         return f"{mon} {day}  {year}"
 
 
-def shell_match(name: str, pat: str) -> bool:
-    """Match following weird starts-with-dot rules."""
-    if name.startswith(".") and not pat.startswith("."):
-        return False
-    return fnmatchcase(name, pat)
-
-
 @dataclass
 class Ls:
     bundle: ZipFile2
     args: Args
-
-    def expand_glob(self, pat: str) -> Iterator[str]:
-        """Return all file names in the bundle that match the pattern."""
-        if "*" in pat or "?" in pat:
-            items = (name for name in self.bundle.namelist() if shell_match(name, pat))
-            yield from items
-        else:
-            yield pat
 
     def should_include(self, name: str) -> bool:
         """Return `True` if we should include this item."""
@@ -194,18 +184,19 @@ class Ls:
             return False
         return True
 
-    def get_zipinfo(self, path: zipfile.Path) -> zipfile.ZipInfo:
+    def get_zipinfo(self, path: ZipPath) -> ZipInfo:
         """Return `ZipInfo` for a path or create a synthetic record."""
-        return self.bundle.NameToInfo.get(path.at, None) or zipfile.ZipInfo(path.at)
+        return self.bundle.NameToInfo.get(path.at, ZipInfo(path.at))
 
-    def get_files(self) -> Iterator[zipfile.ZipInfo]:
+    def get_files(self) -> Iterator[ZipInfo]:
         """Iterate over files in a bundle, hiding entries as appropriate."""
         args = self.args
-        root = zipfile.Path(self.bundle)
+        root = ZipPath(self.bundle)
         seen: set[str] = set()
+        names = self.bundle.namelist()
 
         for pat in args.file:
-            for item in self.expand_glob(pat):
+            for item in expand_glob(names, pat):
                 path = root / item
                 if item != "" and not path.exists():
                     raise FileNotFoundError(f"No such file or directory: {item}")
@@ -222,7 +213,7 @@ class Ls:
                             yield self.get_zipinfo(sub)
 
     @staticmethod
-    def get_extension(f: zipfile.ZipInfo) -> tuple[str, str, str]:
+    def get_extension(f: ZipInfo) -> tuple[str, str, str]:
         """Return string for extension sorting."""
         parts = f.filename.rstrip("/").split("/")
         if f.filename.endswith("/"):  # is dir
@@ -234,19 +225,20 @@ class Ls:
             stem, ext = name.rsplit(".", 1)
         return "/".join(parts[:-1]), ext, stem
 
-    def sort(self, files: Iterable[zipfile.ZipInfo]) -> Iterator[zipfile.ZipInfo]:
+    def sort(self, files: Iterable[ZipInfo]) -> Iterator[ZipInfo]:
         """Sort the selected files."""
         if self.args.sort == "none":
             yield from files
 
+        key: Callable[[ZipInfo], Any]
         reverse = self.args.reverse
         if self.args.sort == "name":
-            key: attrgetter[str] = attrgetter("filename")  # default
+            key = attrgetter("filename")  # default
         elif self.args.sort == "size":
-            key: attrgetter[int] = attrgetter("file_size")
+            key = attrgetter("file_size")
             reverse = not reverse  # biggest first
         elif self.args.sort == "time":
-            key: attrgetter[tuple] = attrgetter("date_time")
+            key = attrgetter("date_time")
             reverse = not reverse  # newest first
         elif self.args.sort == "extension":
             key = self.get_extension
@@ -256,7 +248,7 @@ class Ls:
         items = sorted(files, key=key, reverse=reverse)
         yield from items
 
-    def format(self, f: zipfile.ZipInfo) -> str:
+    def format(self, f: ZipInfo) -> str:
         """Prepare info for printing."""
         args = self.args
         line: list[str] = []
@@ -283,9 +275,10 @@ class Ls:
 
 def main(argv: list[str] | None = None, parsed: FsArgs | None = None) -> int:
     """Entry point for `cosmofy fs ls`."""
+    argv = (argv or sys.argv)[1:]
+    args = Args()
+
     try:
-        argv = (argv or sys.argv)[1:]
-        args = Args()
         if parsed:
             args = replace(args, **asdict(parsed))
         args, argv = parse_args(args, argv, arglist)

@@ -8,11 +8,6 @@ import logging
 import sys
 
 # pkg
-from . import add
-from . import cat
-from . import ls
-from . import rm
-from . import set_args
 from ..args import Arg
 from ..args import global_arglist
 from ..args import global_options
@@ -42,13 +37,6 @@ arglist: list[Arg] = [
     *global_arglist,
     Arg("command", kind=str, action=store),
 ]
-commands: dict[str, ModuleType] = {
-    "ls": ls,
-    "cat": cat,
-    # "add": add,
-    # "rm": rm,
-    # "set-args": set_args,
-}
 
 
 @dataclass
@@ -59,6 +47,17 @@ class FsArgs(GlobalArgs):
 
 def main(argv: list[str] | None = None) -> int:
     """Main entry point for `cosmofy fs`."""
+    from . import cat
+    from . import ls
+
+    commands: dict[str, ModuleType] = {
+        "ls": ls,
+        "cat": cat,
+        # "add": add,
+        # "rm": rm,
+        # "set-args": set_args,
+    }
+
     try:
         argv = (argv or sys.argv)[1:]
         args, argv = parse_args(FsArgs(), argv, arglist, commands=commands)
