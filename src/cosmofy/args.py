@@ -23,10 +23,7 @@ T = TypeVar("T", bound="GlobalArgs")
 # Argument Actions
 # These are the actions that can be taken after parsing an argument.
 
-ArgAction = (
-    Callable[["GlobalArgs", "Arg", str], "GlobalArgs"]
-    | Callable[["GlobalArgs", "Arg", list[str]], "GlobalArgs"]
-)
+ArgAction = Callable[["GlobalArgs", "Arg", Any], "GlobalArgs"]
 
 
 def append(ctx: T, arg: Arg, val: str) -> T:
@@ -183,10 +180,10 @@ def parse_optional(
                 while argv and not argv[0].startswith("-"):
                     vals.append(argv.pop(0))
                 action(ctx, arg, vals)
-            else:
+            elif action in (append, store):
                 action(ctx, arg, argv.pop(0))
         else:  # val is str
-            action(ctx, arg, val)  # type: ignore
+            action(ctx, arg, val)
         changed = True
 
     return changed, argv
@@ -384,7 +381,7 @@ SELF-UPDATER
 """
 
 
-@dataclasses.dataclass
+@dataclass
 class Args:
     help: bool = False
     """Whether to show usage."""
