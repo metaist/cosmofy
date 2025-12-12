@@ -47,13 +47,16 @@ class FsArgs(GlobalArgs):
 
 def main(argv: list[str] | None = None) -> int:
     """Main entry point for `cosmofy fs`."""
+    from . import add
     from . import cat
     from . import ls
+    # from . import rm
+    # from . import set_args
 
     commands: dict[str, ModuleType] = {
         "ls": ls,
         "cat": cat,
-        # "add": add,
+        "add": add,
         # "rm": rm,
         # "set-args": set_args,
     }
