@@ -8,6 +8,7 @@ import sys
 
 # pkg
 from . import add
+from . import args
 from . import cat
 from . import ls
 from . import rm
@@ -40,7 +41,7 @@ class Args(GlobalArgs):
     command: str = arg("", positional=True)  # optional so we can show usage
 
 
-def run(args: Args) -> int:
+def run(_: Args) -> int:
     # NOTE: only called when there was no subcommand found
     cmd.show_usage()
     return 0
@@ -56,6 +57,7 @@ cmd = Command(
         "cat": cat.cmd,
         "add": add.cmd,
         "rm": rm.cmd,
+        "args": args.cmd,
     },
 )
 
