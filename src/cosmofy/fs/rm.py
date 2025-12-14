@@ -55,18 +55,18 @@ def remove_path(bundle: ZipFile2, args: Args, name: str) -> None:
         raise FileNotFoundError(f"Cannot find {name}")
 
     if path.is_file():
-        log.info(f"{banner}remove: {name}")
         if args.for_real:
             bundle.remove(name)
+        log.info(f"{banner}remove: {name}")
     elif path.is_dir():
         if not args.recursive:
             raise Exception(f"Cannot remove directory {name}. Hint: use -r")
         for item in path.iterdir():
             remove_path(bundle, args, item.at)
         if name in bundle.NameToInfo:  # dir actually has an entry
-            log.info(f"{banner}remove: {name}")
             if args.for_real:
                 bundle.remove(name)
+            log.info(f"{banner}remove: {name}")
 
 
 def run(args: Args) -> int:

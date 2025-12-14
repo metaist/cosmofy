@@ -29,6 +29,7 @@ Arguments:
   <file>...                 files relative to current directory to add
 
 Options:
+      -f, --force           overwrite existing files
       --chdir <PATH>        change to this directory before adding
       --dest                prefix to add in the bundle
                             Most python packages go into `Lib/site-packages`
@@ -40,14 +41,9 @@ Options:
 @dataclass
 class Args(FsCommonArgs):
     file: list[str] = arg(list, positional=True, required=True, action="extend")
-    """Patterns of files to add."""
-
     chdir: Path | None = arg(None)
-    """Directory to change to before adding."""
-
     dest: str = arg("")
-    """Prefix to add in bundle."""
-
+    force: bool = arg(False, short="-f")
     # compile_bytecode: bool = arg(False)
 
 
@@ -57,9 +53,16 @@ def add_path(bundle: ZipFile2, args: Args, src: Path, dest: str) -> None:
         raise FileNotFoundError(f"Cannot find file: {src.resolve()}")
 
     if src.is_file():
-        print(f"{banner}add: {dest}")
         if args.for_real:
+            if bundle.NameToInfo.get(dest) is not None:
+                if args.force:
+                    bundle.remove(dest)
+                else:
+                    raise FileExistsError(
+                        f"File already exists: {dest}\nHint: use -f to overwrite."
+                    )
             bundle.add_file(dest, src.read_bytes())
+        print(f"{banner}add: {dest}")
     elif src.is_dir():
         for item in src.iterdir():
             add_path(bundle, args, item, dest + f"/{item.name}")
