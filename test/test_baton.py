@@ -239,3 +239,27 @@ def test_actions() -> None:
     assert have.choice == "a", "enforces choices"
     with pytest.raises(ValueError, match="Invalid value"):
         baton.parse(X, split("--choice x"))
+
+
+# TODO subcommands
+# TODO env
+
+
+def test_edge() -> None:
+    @dataclass
+    class X:
+        opt: bool = arg(False)
+        output: str = arg("")
+        pos: str = arg("", positional=True)
+
+    have = baton.parse(X, split(""))
+    assert have.opt is False
+
+    have = baton.parse(X, split("--"))
+    assert have.opt is False
+
+    have = baton.parse(X, split("--output --weird-filename"))
+    assert have.output == "--weird-filename"
+
+    have = baton.parse(X, split("-- -weird-file"))
+    assert have.pos == "-weird-file"

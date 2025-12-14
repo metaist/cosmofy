@@ -57,10 +57,13 @@ def get_version(path: Path, default: str = "") -> str:
     """
     version = default
     if path.exists():
-        cmd = f"{path.resolve()} --version"
-        out = subprocess.run(cmd, capture_output=True, check=True, shell=True)
-        if match := RE_VERSION.search(out.stdout):
-            version = match.group().decode("utf-8")
+        try:
+            cmd = f"{path.resolve()} --version"
+            out = subprocess.run(cmd, capture_output=True, check=True, shell=True)
+            if match := RE_VERSION.search(out.stdout):
+                version = match.group().decode("utf-8")
+        except subprocess.CalledProcessError:
+            ...
     return version
 
 
