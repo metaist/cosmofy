@@ -2,27 +2,19 @@
 
 # std
 from __future__ import annotations
-from dataclasses import asdict
 from dataclasses import dataclass
-from dataclasses import field
-from dataclasses import replace
 from pathlib import Path
 import logging
 import sys
 import os
 
 # pkg
-from . import fs_common_arglist
 from . import fs_common_args
 from . import FsCommonArgs
-from .__main__ import FsArgs
-from ..args import Arg
-from ..args import extend
-from ..args import store
-from ..args import global_arglist
 from ..args import global_options
-from ..args import parse_args
-from ..args import short_usage
+from ..args import show_error
+from ..baton import arg
+from ..baton import Command
 from ..zipfile2 import ZipFile2
 
 
@@ -47,26 +39,19 @@ Options:
 {global_options}
 """
 
-arglist: list[Arg] = [
-    *global_arglist,
-    *fs_common_arglist,
-    Arg("file", kind=str, action=extend, required=True),
-    Arg("--chdir", kind=Path, action=store),
-    Arg("--dest", kind=str, action=store),
-    # Arg("--compile-bytecode"),
-]
-
 
 @dataclass
-class Args(FsArgs, FsCommonArgs):
-    file: list[str] = field(default_factory=list)
+class Args(FsCommonArgs):
+    file: list[str] = arg(list, positional=True, required=True, action="extend")
     """Patterns of files to add."""
 
-    chdir: Path | None = None
+    chdir: Path | None = arg(None)
     """Directory to change to before adding."""
 
-    dest: str = DEFAULT_DEST
+    dest: str = arg(DEFAULT_DEST)
     """Prefix to add in bundle."""
+
+    # compile_bytecode: bool = arg(False)
 
 
 def add_path(bundle: ZipFile2, src: Path, dest: str, dry_run: bool = False) -> None:
@@ -102,18 +87,9 @@ def add_files(bundle: ZipFile2, args: Args) -> None:
         os.chdir(original)
 
 
-def main(argv: list[str] | None = None, parsed: FsArgs | None = None) -> int:
+def run(args: Args) -> int:
     """Entry point for `cosmofy fs add`."""
-    argv = (argv or sys.argv)[1:]
-    args = Args()
-
     try:
-        if parsed:
-            args = replace(args, **asdict(parsed))
-        args, argv = parse_args(args, argv, arglist)
-        if args.show_help(usage, log):
-            return 0
-
         assert args.ensure_bundle() and args.bundle
 
         args.dest = args.dest.strip("/")
@@ -124,18 +100,13 @@ def main(argv: list[str] | None = None, parsed: FsArgs | None = None) -> int:
         # good to go
         bundle = ZipFile2(args.bundle, mode="a")
         add_files(bundle, args)
-    except ValueError as e:
-        log.error(e)
-        print(short_usage(usage))
-        return 1
     except Exception as e:
-        if args.verbosity > 1:
-            log.exception(e)
-        else:
-            log.error(e)
+        show_error(args, log, e)
         return 2
     return 0
 
 
+cmd = Command("cosmofy.fs.add", Args, run, usage)
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(cmd.main())

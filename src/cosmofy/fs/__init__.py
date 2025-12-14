@@ -5,20 +5,17 @@ from pathlib import Path
 from typing import Iterator
 
 # pkg
-from ..args import Arg
-from ..args import store
+from ..baton import arg
 from ..args import GlobalArgs
 
 fs_common_args = """\
   <bundle>                  Cosmopolitan file bundle
 """.rstrip()
 
-fs_common_arglist: list[Arg] = [Arg("bundle", kind=Path, action=store, required=True)]
-
 
 @dataclass
 class FsCommonArgs(GlobalArgs):
-    bundle: Path | None = None
+    bundle: Path | None = arg(None, positional=True, required=True)
     """Cosmopolitan file bundle."""
 
     def ensure_bundle(self) -> bool:

@@ -4,10 +4,7 @@
 
 # std
 from __future__ import annotations
-from dataclasses import asdict
 from dataclasses import dataclass
-from dataclasses import field
-from dataclasses import replace
 from datetime import datetime
 from datetime import timedelta
 from operator import attrgetter
@@ -16,27 +13,21 @@ from typing import Callable
 from typing import Iterable
 from typing import Iterator
 from typing import Literal
-from zipfile import ZipInfo
 from zipfile import Path as ZipPath
+from zipfile import ZipInfo
 import logging
 import stat
 import sys
 
 # pkg
 from . import expand_glob
-from . import fs_common_arglist
 from . import fs_common_args
 from . import FsCommonArgs
 from . import shell_match
-from .__main__ import FsArgs
-from ..args import append
-from ..args import Arg
-from ..args import extend
-from ..args import global_arglist
 from ..args import global_options
-from ..args import parse_args
-from ..args import short_usage
-from ..args import store
+from ..args import show_error
+from ..baton import arg
+from ..baton import Command
 from ..zipfile2 import ZipFile2
 
 log = logging.getLogger(__name__)
@@ -69,64 +60,41 @@ Output options:
 {global_options.replace("-h,", "   ")}
 """
 
-arglist: list[Arg] = [
-    *global_arglist,
-    *fs_common_arglist,
-    # positional
-    Arg("file", kind=str, action=extend, required=False),
-    # filter
-    Arg("--all", "-a"),
-    Arg("--ignore-backups", "-B"),
-    Arg("--hide", kind=str, action=append),
-    Arg("--ignore", "-I", kind=str, action=append),
-    # sort
-    Arg("--reverse", "-r"),
-    Arg("--sort", kind=str, action=store),
-    # output
-    Arg("--long", "-l"),
-    Arg("--human-readable", "-h"),  # NOTE: conflicts with `--help`
-    Arg("--si"),
-]
-
 
 @dataclass
-class Args(FsArgs, FsCommonArgs):
+class Args(FsCommonArgs):
     # positional
-
-    file: list[str] = field(default_factory=list)
+    file: list[str] = arg(list, positional=True)
     """Files to show information about."""
 
     # filter
-
-    all: bool = False
+    all: bool = arg(False, short="-a")
     """Whether to show entries that start with `.`"""
 
-    ignore_backups: bool = False
+    ignore_backups: bool = arg(False, short="-B")
     """Hide entries that end with `~`"""
 
-    hide: list[str] = field(default_factory=list)
+    hide: list[str] = arg(list)
     """Hide entries, **unless** with `--all`"""
 
-    ignore: list[str] = field(default_factory=list)
+    ignore: list[str] = arg(list, short="-I")
     """Hide entries, **even** with `--all`"""
 
     # sort
-
-    reverse: bool = False
+    reverse: bool = arg(False, short="-r")
     """Whether to reverse the sort."""
 
-    sort: Literal["none", "name", "size", "time", "extension"] = "name"
+    sort: Literal["none", "name", "size", "time", "extension"] = arg("name")
     """How to sort the list."""
 
     # output
-
-    long: bool = False
+    long: bool = arg(False, short="-l")
     """Whether to use a long listing format."""
 
-    human_readable: bool = False
+    human_readable: bool = arg(False, short="-h")
     """Whether to use human-readable sizes."""
 
-    si: bool = False
+    si: bool = arg(False)
     """Whether to use 1000 instead of 1024 for human-readable chunks."""
 
 
@@ -167,7 +135,7 @@ def ls_time(dt: datetime, *, now: datetime | None = None) -> str:
 
 
 @dataclass
-class Ls:
+class Runner:
     bundle: ZipFile2
     args: Args
 
@@ -273,18 +241,9 @@ class Ls:
             print(self.format(f))
 
 
-def main(argv: list[str] | None = None, parsed: FsArgs | None = None) -> int:
-    """Entry point for `cosmofy fs ls`."""
-    argv = (argv or sys.argv)[1:]
-    args = Args()
-
+def run(args: Args) -> int:
+    "Entry point for `cosmofy fs ls`."
     try:
-        if parsed:
-            args = replace(args, **asdict(parsed))
-        args, argv = parse_args(args, argv, arglist)
-        if args.show_help(usage, log):
-            return 0
-
         assert args.ensure_bundle() and args.bundle
         if args.dry_run:
             print(f"[DRY RUN] <list contents of {args.bundle}>")
@@ -299,19 +258,14 @@ def main(argv: list[str] | None = None, parsed: FsArgs | None = None) -> int:
 
         # good to go
         bundle = ZipFile2(args.bundle)
-        Ls(bundle, args).run()
-    except ValueError as e:
-        log.error(e)
-        print(short_usage(usage))
-        return 1
+        Runner(bundle, args).run()
     except Exception as e:
-        if args.verbosity > 1:
-            log.exception(e)
-        else:
-            log.error(e)
+        show_error(args, log, e)
         return 2
     return 0
 
 
+cmd = Command("cosmofy.fs.ls", Args, run, usage)
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(cmd.main())

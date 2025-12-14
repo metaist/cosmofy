@@ -3,18 +3,17 @@
 # std
 from __future__ import annotations
 from dataclasses import dataclass
-from types import ModuleType
 import logging
 import sys
 
 # pkg
-from ..args import Arg
-from ..args import global_arglist
+from . import cat
+from . import ls
 from ..args import global_options
 from ..args import GlobalArgs
-from ..args import parse_args
-from ..args import short_usage
-from ..args import store
+from ..baton import arg
+from ..baton import Command
+
 
 log = logging.getLogger(__name__)
 
@@ -28,54 +27,25 @@ Commands:
   cat                       print file contents
   add                       add files to bundle
   rm                        remove files from bundle
-  set-args                  set special .args file in bundle
+  args                      get/set special .args file in bundle
 
 {global_options}
 """
 
-arglist: list[Arg] = [
-    *global_arglist,
-    Arg("command", kind=str, action=store),
-]
-
 
 @dataclass
-class FsArgs(GlobalArgs):
-    command: str = ""
+class Args(GlobalArgs):
+    command: str = arg("", positional=True)
     """Subcommand to run."""
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Main entry point for `cosmofy fs`."""
-    from . import add
-    from . import cat
-    from . import ls
-    # from . import rm
-    # from . import set_args
+def run(args: Args) -> int:
+    # NOTE: only called when there was no subcommand found
+    cmd.show_usage()
+    return 0
 
-    commands: dict[str, ModuleType] = {
-        "ls": ls,
-        "cat": cat,
-        "add": add,
-        # "rm": rm,
-        # "set-args": set_args,
-    }
 
-    try:
-        argv = (argv or sys.argv)[1:]
-        args, argv = parse_args(FsArgs(), argv, arglist, commands=commands)
-        if args.show_help(usage, log):
-            return 0
-
-        if args.command not in commands:
-            raise ValueError(f"Unknown command: {args.command}")
-    except ValueError as e:
-        log.error(e)
-        print(short_usage(usage))
-        return 1
-
-    return commands[args.command].main(["fs"] + argv, args)  # type: ignore
-
+cmd = Command("cosmofy.fs", Args, run, usage, {"ls": ls.cmd, "cat": cat.cmd})
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(cmd.main())
