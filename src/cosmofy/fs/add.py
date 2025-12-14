@@ -12,15 +12,12 @@ import os
 from . import fs_common_args
 from . import FsCommonArgs
 from ..args import global_options
-from ..args import show_error
 from ..baton import arg
 from ..baton import Command
 from ..zipfile2 import ZipFile2
 
 
 log = logging.getLogger(__name__)
-
-DEFAULT_DEST = "Lib/site-packages"
 
 usage = f"""\
 Add files to a Cosmopolitan bundle.
@@ -34,7 +31,7 @@ Arguments:
 Options:
       --chdir <PATH>        change to this directory before adding
       --dest                prefix to add in the bundle
-        [default: {DEFAULT_DEST}]
+                            Most python packages go into `Lib/site-packages`
 
 {global_options}
 """
@@ -48,24 +45,24 @@ class Args(FsCommonArgs):
     chdir: Path | None = arg(None)
     """Directory to change to before adding."""
 
-    dest: str = arg(DEFAULT_DEST)
+    dest: str = arg("")
     """Prefix to add in bundle."""
 
     # compile_bytecode: bool = arg(False)
 
 
-def add_path(bundle: ZipFile2, src: Path, dest: str, dry_run: bool = False) -> None:
-    banner = "[DRY RUN] " if dry_run else ""
+def add_path(bundle: ZipFile2, args: Args, src: Path, dest: str) -> None:
+    banner = args.banner
     if not src.exists():
         raise FileNotFoundError(f"Cannot find file: {src.resolve()}")
 
     if src.is_file():
-        log.info(f"{banner} add: {dest}")
-        if not dry_run:
+        print(f"{banner}add: {dest}")
+        if args.for_real:
             bundle.add_file(dest, src.read_bytes())
     elif src.is_dir():
         for item in src.iterdir():
-            add_path(bundle, item, dest + f"/{item.name}", dry_run)
+            add_path(bundle, args, item, dest + f"/{item.name}")
 
 
 def add_files(bundle: ZipFile2, args: Args) -> None:
@@ -77,10 +74,9 @@ def add_files(bundle: ZipFile2, args: Args) -> None:
 
     root = Path.cwd()
     prefix = str(root)
-    for pattern in args.file:
-        for src in sorted(root.glob(pattern)):
-            dest = args.dest + str(src).removeprefix(prefix)
-            add_path(bundle, src, dest, args.dry_run)
+    for name in args.file:
+        dest = args.dest + name.removeprefix(prefix)
+        add_path(bundle, args, Path(name), dest)
 
     if args.chdir:
         log.debug(f"change directory: {original}")
@@ -89,6 +85,7 @@ def add_files(bundle: ZipFile2, args: Args) -> None:
 
 def run(args: Args) -> int:
     """Entry point for `cosmofy fs add`."""
+    args.setup_logger()
     try:
         assert args.ensure_bundle() and args.bundle
 
@@ -101,7 +98,7 @@ def run(args: Args) -> int:
         bundle = ZipFile2(args.bundle, mode="a")
         add_files(bundle, args)
     except Exception as e:
-        show_error(args, log, e)
+        args.show_error(log, e)
         return 2
     return 0
 

@@ -12,7 +12,6 @@ from . import expand_glob
 from . import fs_common_args
 from . import FsCommonArgs
 from ..args import global_options
-from ..args import show_error
 from ..baton import arg
 from ..baton import Command
 from ..zipfile2 import ZipFile2
@@ -46,8 +45,10 @@ class Args(FsCommonArgs):
 
 
 def show_files(bundle: ZipFile2, args: Args) -> None:
+    banner = args.banner
+
     password: bytes | None = None
-    if args.prompt:
+    if args.for_real and args.prompt:
         password = getpass().encode("utf-8")
 
     names = bundle.namelist()
@@ -55,23 +56,21 @@ def show_files(bundle: ZipFile2, args: Args) -> None:
         for name in expand_glob(names, pat):
             if name.endswith("/"):  # ignore directories
                 continue
-            print(bundle.read(name, password).decode("utf-8"), flush=True)
+            if args.for_real:
+                print(bundle.read(name, password).decode("utf-8"), flush=True)
+            else:
+                print(f"{banner}<show contents of {name}>", flush=True)
 
 
 def run(args: Args) -> int:
     """Entry point for `cosmofy fs cat`."""
+    args.setup_logger()
     try:
         assert args.ensure_bundle() and args.bundle
-        if args.dry_run:
-            for pattern in args.file:
-                print(f"[DRY RUN] <show contents of {pattern} in {args.bundle}>")
-            return 0
-
-        # good to go
         bundle = ZipFile2(args.bundle)
         show_files(bundle, args)
     except Exception as e:
-        show_error(args, log, e)
+        args.show_error(log, e)
         return 2
     return 0
 

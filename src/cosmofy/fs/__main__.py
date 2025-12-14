@@ -7,8 +7,10 @@ import logging
 import sys
 
 # pkg
+from . import add
 from . import cat
 from . import ls
+from . import rm
 from ..args import global_options
 from ..args import GlobalArgs
 from ..baton import arg
@@ -35,8 +37,7 @@ Commands:
 
 @dataclass
 class Args(GlobalArgs):
-    command: str = arg("", positional=True)
-    """Subcommand to run."""
+    command: str = arg("", positional=True)  # optional so we can show usage
 
 
 def run(args: Args) -> int:
@@ -45,7 +46,18 @@ def run(args: Args) -> int:
     return 0
 
 
-cmd = Command("cosmofy.fs", Args, run, usage, {"ls": ls.cmd, "cat": cat.cmd})
+cmd = Command(
+    "cosmofy.fs",
+    Args,
+    run,
+    usage,
+    {
+        "ls": ls.cmd,
+        "cat": cat.cmd,
+        "add": add.cmd,
+        "rm": rm.cmd,
+    },
+)
 
 if __name__ == "__main__":
     sys.exit(cmd.main())

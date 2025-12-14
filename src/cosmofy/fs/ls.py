@@ -25,7 +25,6 @@ from . import fs_common_args
 from . import FsCommonArgs
 from . import shell_match
 from ..args import global_options
-from ..args import show_error
 from ..baton import arg
 from ..baton import Command
 from ..zipfile2 import ZipFile2
@@ -243,10 +242,11 @@ class Runner:
 
 def run(args: Args) -> int:
     "Entry point for `cosmofy fs ls`."
+    args.setup_logger()
     try:
         assert args.ensure_bundle() and args.bundle
         if args.dry_run:
-            print(f"[DRY RUN] <list contents of {args.bundle}>")
+            print(f"{args.banner}<list contents of {args.bundle}>")
             return 0
 
         if args.ignore_backups:
@@ -260,7 +260,7 @@ def run(args: Args) -> int:
         bundle = ZipFile2(args.bundle)
         Runner(bundle, args).run()
     except Exception as e:
-        show_error(args, log, e)
+        args.show_error(log, e)
         return 2
     return 0
 

@@ -11,6 +11,14 @@ import logging
 # pkg
 from .baton import arg
 
+DRY_RUN = "[DRY RUN] "
+"""Banner to display when using `--dry-run`."""
+
+
+def banner(dry_run: bool = False) -> str:
+    return DRY_RUN if dry_run else ""
+
+
 log_normal = "%(levelname)s: %(message)s"
 log_debug = "%(name)s.%(funcName)s: %(levelname)s: %(message)s"
 log_verbose = " %(filename)s:%(lineno)s %(funcName)s(): %(levelname)s: %(message)s"
@@ -54,35 +62,30 @@ class GlobalArgs:
         """Set `dry_run`."""
         self.dry_run = not value
 
-    def show_help(self, usage: str, log: logging.Logger) -> bool:
-        """Return `True` if `--help` was called."""
-        setup_logger(self)
+    @property
+    def banner(self) -> str:
+        return banner(self.dry_run)
+
+    def setup_logger(self) -> None:
+        """Ensure logging is configured properly."""
+        level = self.verbosity
+        if level < 0:
+            logging.disable(logging.CRITICAL)
+        elif level > 0:
+            root_logger = logging.getLogger()
+            root_logger.setLevel(logging.DEBUG)
+            fmt = log_verbose if level > 1 else log_debug
+            formatter = logging.Formatter(fmt)
+            for handler in root_logger.handlers:
+                handler.setFormatter(formatter)
         log.debug(self)
-        if self.help:
-            print(usage.strip())
-            return True
-        return False
 
-
-def setup_logger(args: GlobalArgs) -> None:
-    """Ensure logging is configured properly."""
-    level = args.verbosity
-    if level < 0:
-        logging.disable(logging.CRITICAL)
-    elif level > 0:
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.DEBUG)
-        fmt = log_verbose if level > 1 else log_debug
-        formatter = logging.Formatter(fmt)
-        for handler in root_logger.handlers:
-            handler.setFormatter(formatter)
-
-
-def show_error(args: GlobalArgs, log: logging.Logger, e: Exception) -> None:
-    if args.verbosity > 1:
-        log.exception(e)
-    else:
-        log.error(e)
+    def show_error(self, log: logging.Logger, e: Exception) -> None:
+        "Display an error."
+        if self.verbosity > 1:
+            log.exception(e)
+        else:
+            log.error(e)
 
 
 DEFAULT_PYTHON_URL = "https://cosmo.zip/pub/cosmos/bin/python"
@@ -153,16 +156,16 @@ OUTPUT
 
   -o PATH, --output PATH
     Path to output file.
-    [default: `<main_module>`]
-
-    `<main_module>` is the first module with a `__main__.py` or file with an
-    `if __name__ == "__main__"` line.
+    [default: `<project.name>`]
 
 FILES
 
+  --script PATH
+    Cosmofy a Python script, rather than the current project.
+
   --args STRING
     Cosmopolitan Python arguments.
-    [default: `"-m <main_module>"`]
+    [default: `"-m <project.name>"`]
 
     If NOT using the self-updater, all python options are supported:
     https://docs.python.org/3/using/cmdline.html
@@ -170,21 +173,17 @@ FILES
     If using the self-updater only a subset is supported:
     https://github.com/metaist/cosmofy#supported-python-cli
 
-  --add GLOB, <add>
+  -a GLOB, --add GLOB
     One or more glob-like patterns to add. Folders are recursively added.
-    Files ending in `.py` will be compiled.
 
   -x GLOB, --exclude GLOB
     One or more glob-like patterns to exclude from being added.
 
-    Common things to exclude are egg files and python cache:
-    $ cosmofy src -x "**/*.egg-info/*" -x "**/__pycache__/*"
-
   --rm GLOB, --remove GLOB
-    One or more glob-like patters to remove from the output.
+    One or more glob-like patterns to remove from the output.
 
     Common things to remove are `pip`, terminal info, and SSL certs:
-    $ cosmofy src/my_module --rm 'usr/*' --rm 'Lib/site-packages/pip/*'
+    $ cosmofy -i bundle.com --rm 'usr/*' --rm 'Lib/site-packages/pip/*'
 
 SELF-UPDATER
 
@@ -277,6 +276,9 @@ class Args:
     """Path to the output file."""
 
     # files
+
+    script: Path | None = None
+    """Path to script to bundle instead of project."""
 
     args: str = ""
     """Args to pass to Cosmopolitan python."""
