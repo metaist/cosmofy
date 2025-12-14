@@ -293,6 +293,10 @@ def _parse(
             raise ValueError(f"Unexpected argument: {val}")
 
         spec = positionals.pop(0)
+        # TODO: Mark the positional that is supposed to receive the subcommand name.
+        if spec.long == "command" and val not in cmd.subcommands:
+            raise ValueError(f"Unknown subcommand name: {val}")
+
         if spec.action == "extend":
             vals = [val] + _pop_values(argv, set(cmd.subcommands.keys()))
             _do_action(ctx, spec, vals)
@@ -328,7 +332,7 @@ class Command:
     usage: str = ""
     subcommands: dict[str, Command] = field(default_factory=dict)
 
-    _args: list[Arg] = field(default_factory=list, repr=False)
+    _args: list[Arg] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._args = Arg.from_class(self.cls)

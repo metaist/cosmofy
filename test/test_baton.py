@@ -242,6 +242,51 @@ def test_actions() -> None:
 
 
 # TODO subcommands
+def test_subcommands() -> None:
+    @dataclass
+    class Common:
+        verbose: int = arg(default=0, short="-v", action="count")
+
+    @dataclass
+    class Parent(Common):
+        """Usage: parent [--verbose] <command>"""
+
+        command: str = arg(default="", positional=True, required=True)
+
+    @dataclass
+    class Child(Common):
+        """Usage: child [--verbose] [<input>]"""
+
+        input: str = arg(default="", positional=True)
+
+    scenario = 0
+
+    def run_child(args: Child) -> int:
+        if scenario == 1:
+            assert args.verbose == 2
+            assert args.input == "path"
+        return 0
+
+    def run_parent(args: Parent) -> int:
+        if scenario == 1:
+            assert args.verbose == 2
+            assert args.command == "child"
+
+        return 0
+
+    child = Command("child", Child, run_child)
+    parent = Command("parent", Parent, run_parent, subcommands={"child": child})
+
+    scenario = 1
+    assert parent.main(split("-vv child path")) == 0
+    assert parent.main(split("child path -vv")) == 0
+    assert parent.main(split("child -vv path")) == 0
+    assert parent.main(split("-v child -v path")) == 0
+
+    scenario = 2
+    assert parent.main(split("unknown")) == 1, "unknown subcommand errors"
+
+
 # TODO env
 
 
