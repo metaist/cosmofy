@@ -3,17 +3,18 @@
 # std
 from __future__ import annotations
 from dataclasses import dataclass
+from shlex import split
 import logging
 import sys
 
+
 # pkg
-from . import fs_common_args
-from . import FsCommonArgs
+from ..args import common_args
+from ..args import CommonArgs
 from ..args import global_options
 from ..baton import arg
 from ..baton import Command
 from ..zipfile2 import ZipFile2
-from shlex import split
 
 
 log = logging.getLogger(__name__)
@@ -23,18 +24,18 @@ Get or set the special `.args` files in a Cosmopolitan bundle.
 
 These are the arguments to the Cosmopolitan Python.
 
-Usage: cosmofy fs args <bundle> [<val>]
+Usage: cosmofy fs args <BUNDLE> [OPTIONS] [<VAL>]
 
 Arguments:
-{fs_common_args}
-  <val>                     value to set (if omitted, current value is printed)
+{common_args}
+  <VAL>                     value to set (if omitted, current value is printed)
 
 {global_options}
 """
 
 
 @dataclass
-class Args(FsCommonArgs):
+class Args(CommonArgs):
     val: str = arg("", positional=True, required=False)
 
 

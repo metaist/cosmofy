@@ -9,8 +9,8 @@ import sys
 import os
 
 # pkg
-from . import fs_common_args
-from . import FsCommonArgs
+from ..args import common_args
+from ..args import CommonArgs
 from ..args import global_options
 from ..baton import arg
 from ..baton import Command
@@ -22,14 +22,14 @@ log = logging.getLogger(__name__)
 usage = f"""\
 Add files to a Cosmopolitan bundle.
 
-Usage: cosmofy fs add <bundle> [options] <file>...
+Usage: cosmofy fs add <BUNDLE> [OPTIONS] <FILE>...
 
 Arguments:
-{fs_common_args}
-  <file>...                 files relative to current directory to add
+{common_args}
+  <FILE>...                 files relative to current directory to add
 
 Options:
-      -f, --force           overwrite existing files
+  -f, --force               overwrite existing files
       --chdir <PATH>        change to this directory before adding
       --dest                prefix to add in the bundle
                             Most python packages go into `Lib/site-packages`
@@ -39,7 +39,7 @@ Options:
 
 
 @dataclass
-class Args(FsCommonArgs):
+class Args(CommonArgs):
     file: list[str] = arg(list, positional=True, required=True, action="extend")
     chdir: Path | None = arg(None)
     dest: str = arg("")

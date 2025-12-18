@@ -21,9 +21,9 @@ import sys
 
 # pkg
 from . import expand_glob
-from . import fs_common_args
-from . import FsCommonArgs
 from . import shell_match
+from ..args import common_args
+from ..args import CommonArgs
 from ..args import global_options
 from ..baton import arg
 from ..baton import Command
@@ -34,22 +34,22 @@ log = logging.getLogger(__name__)
 usage = f"""\
 List contents of a Cosmopolitan bundle.
 
-Usage: cosmofy fs ls <bundle> [options] [<file>...]
+Usage: cosmofy fs ls <BUNDLE> [OPTIONS] [<FILE>...]
 
 Arguments:
-{fs_common_args}
-  <file>...                 one or more file patterns to show
+{common_args}
+  <FILE>...                 one or more file patterns to show
 
 Filter options:
   -a, --all                 show entries whose name starts with `.`
   -B, --ignore-backups      hide entries whose name ends with `~`
-      --hide <PATTERN>      hide matching entries, unless `--all`
-  -I, --ignore <PATTERN>    hide matching entries, even with `--all`
+      --hide <PATTERN>      hide matching entries, unless --all
+  -I, --ignore <PATTERN>    hide matching entries, even with --all
 
 Sort options:
   -r, --reverse             reverse the sort order
-      --sort <MODE>         one of: `none`, `name` (default),
-                            `size`, `time`, `extension`
+      --sort <MODE>         [choices: none, name, size, time, extension]
+                            [default: name]
 
 Output options:
   -l, --long                show permissions, size, and modified date
@@ -61,7 +61,7 @@ Output options:
 
 
 @dataclass
-class Args(FsCommonArgs):
+class Args(CommonArgs):
     # positional
     file: list[str] = arg(list, positional=True)
     """Files to show information about."""

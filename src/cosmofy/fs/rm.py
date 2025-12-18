@@ -8,8 +8,8 @@ import logging
 import sys
 
 # pkg
-from . import fs_common_args
-from . import FsCommonArgs
+from ..args import common_args
+from ..args import CommonArgs
 from ..args import global_options
 from ..baton import arg
 from ..baton import Command
@@ -21,11 +21,11 @@ log = logging.getLogger(__name__)
 usage = f"""\
 Remove files from a Cosmopolitan bundle.
 
-Usage: cosmofy fs rm <bundle> [options] <file>...
+Usage: cosmofy fs rm <BUNDLE> [OPTIONS] <FILE>...
 
 Arguments:
-{fs_common_args}
-  <file>...                 files to remove
+{common_args}
+  <FILE>...                 files to remove
 
 Options:
   -f, --force               ignore nonexistent files
@@ -36,7 +36,7 @@ Options:
 
 
 @dataclass
-class Args(FsCommonArgs):
+class Args(CommonArgs):
     __doc__ = usage
     file: list[str] = arg(list, positional=True, required=True, action="extend")
     force: bool = arg(False, short="-f")

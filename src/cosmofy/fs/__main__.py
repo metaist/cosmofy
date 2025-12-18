@@ -7,11 +7,11 @@ import logging
 import sys
 
 # pkg
-from . import add
-from . import args
-from . import cat
-from . import ls
-from . import rm
+from .add import cmd as add
+from .args import cmd as args
+from .cat import cmd as cat
+from .ls import cmd as ls
+from .rm import cmd as rm
 from ..args import global_options
 from ..args import GlobalArgs
 from ..baton import arg
@@ -23,14 +23,14 @@ log = logging.getLogger(__name__)
 usage = f"""\
 Cosmopolitan file system tool.
 
-Usage: cosmofy fs [options] <command>
+Usage: cosmofy fs [OPTIONS] <COMMAND>
 
 Commands:
   ls                        list files in bundle
   cat                       print file contents
   add                       add files to bundle
   rm                        remove files from bundle
-  args                      get/set special .args file in bundle
+  args                      get/set special `.args` file in bundle
 
 {global_options}
 """
@@ -53,11 +53,11 @@ cmd = Command(
     run,
     usage,
     {
-        "ls": ls.cmd,
-        "cat": cat.cmd,
-        "add": add.cmd,
-        "rm": rm.cmd,
-        "args": args.cmd,
+        "ls": ls,
+        "cat": cat,
+        "add": add,
+        "rm": rm,
+        "args": args,
     },
 )
 

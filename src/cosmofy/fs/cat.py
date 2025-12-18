@@ -9,8 +9,8 @@ import sys
 
 # pkg
 from . import expand_glob
-from . import fs_common_args
-from . import FsCommonArgs
+from ..args import common_args
+from ..args import CommonArgs
 from ..args import global_options
 from ..baton import arg
 from ..baton import Command
@@ -22,21 +22,21 @@ log = logging.getLogger(__name__)
 usage = f"""\
 Print contents of a file within a Cosmopolitan bundle.
 
-Usage: cosmofy fs cat <bundle> [options] <file>...
+Usage: cosmofy fs cat <BUNDLE> [OPTIONS] <FILE>...
 
 Arguments:
-{fs_common_args}
-  <file>...                 one or more file patterns to show
+{common_args}
+  <FILE>...                 one or more file patterns to show
 
 Options:
-  -p, --prompt              whether to prompt for a decryption password
+  -p, --prompt              prompt for a decryption password
 
 {global_options}
 """
 
 
 @dataclass
-class Args(FsCommonArgs):
+class Args(CommonArgs):
     file: list[str] = arg(list, positional=True, required=True)
     """Patterns of files to print."""
 
