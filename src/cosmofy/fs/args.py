@@ -11,10 +11,12 @@ import sys
 # pkg
 from ..args import common_args
 from ..args import CommonArgs
+from ..args import get_banner
 from ..args import global_options
 from ..baton import arg
 from ..baton import Command
 from ..zipfile2 import ZipFile2
+from .rm import remove_path
 
 
 log = logging.getLogger(__name__)
@@ -24,11 +26,11 @@ Get or set the special `.args` files in a Cosmopolitan bundle.
 
 These are the arguments to the Cosmopolitan Python.
 
-Usage: cosmofy fs args <BUNDLE> [OPTIONS] [<VAL>]
+Usage: cosmofy fs args <BUNDLE> [OPTIONS] [VAL]
 
 Arguments:
 {common_args}
-  <VAL>                     value to set (if omitted, current value is printed)
+  [VAL]                     value to set (if omitted, current value is printed)
 
 {global_options}
 """
@@ -48,11 +50,17 @@ def get_args(bundle: ZipFile2) -> str:
     return bundle.read(".args").decode("utf-8").replace("\n", " ")
 
 
-def set_args(bundle: ZipFile2, val: str) -> str:
+def set_args(bundle: ZipFile2, val: str, *, dry_run: bool = False) -> str:
     """Set the value of the `.args` file."""
+    banner = get_banner(dry_run)
+    for_real = not dry_run
+
+    val = val.strip()
     if bundle.NameToInfo.get(".args") is not None:
-        bundle.remove(".args")
-    bundle.add_file(".args", "\n".join(split(val)))
+        remove_path(bundle, ".args", force=True, dry_run=dry_run)
+    if for_real:
+        bundle.add_file(".args", "\n".join(split(val)))
+    log.info(f"{banner}set `.args` to '{val}'")
     return val
 
 
@@ -63,12 +71,9 @@ def run(args: Args) -> int:
         assert args.ensure_bundle() and args.bundle
         bundle = ZipFile2(args.bundle, "a")
         if args.val:
-            if args.for_real:
-                print(set_args(bundle, args.val))
-            else:
-                print(f"{args.banner}<set .args in {args.bundle}>")
+            set_args(bundle, args.val, dry_run=args.dry_run)
         else:
-            print(get_args(bundle))
+            print(get_args(bundle))  # don't log!
     except Exception as e:
         args.show_error(log, e)
         return 2

@@ -16,7 +16,7 @@ DRY_RUN = "[`DRY RUN`] "
 """Banner to display when using `--dry-run`."""
 
 
-def banner(dry_run: bool = False) -> str:
+def get_banner(dry_run: bool = False) -> str:
     return DRY_RUN if dry_run else ""
 
 
@@ -66,7 +66,7 @@ class GlobalArgs:
 
     @property
     def banner(self) -> str:
-        return banner(self.dry_run)
+        return get_banner(self.dry_run)
 
     def setup_logger(self) -> None:
         """Ensure logging is configured properly."""

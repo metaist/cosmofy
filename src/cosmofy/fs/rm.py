@@ -10,6 +10,7 @@ import sys
 # pkg
 from ..args import common_args
 from ..args import CommonArgs
+from ..args import get_banner
 from ..args import global_options
 from ..baton import arg
 from ..baton import Command
@@ -43,30 +44,46 @@ class Args(CommonArgs):
     recursive: bool = arg(False, short="-r")  # TODO: support -R
 
 
-def remove_path(bundle: ZipFile2, args: Args, name: str) -> None:
-    """Remove a path from a bundle."""
-    banner = args.banner
+def remove_path(
+    bundle: ZipFile2,
+    name: str,
+    *,
+    force: bool = False,
+    recursive: bool = False,
+    # global
+    dry_run: bool = False,
+) -> None:
+    """Remove `path` from `bundle`."""
+    banner = get_banner(dry_run)
+    for_real = not dry_run
 
-    assert args.bundle  # for type check
-    path = ZipPath(args.bundle, name)
+    path = ZipPath(bundle, name)
     if not path.exists():
-        if args.force:
+        if force:
             return
-        raise FileNotFoundError(f"Cannot find {name}")
+        raise FileNotFoundError(f"cannot find {name}")
 
     if path.is_file():
-        if args.for_real:
+        if for_real:
             bundle.remove(name)
-        log.info(f"{banner}remove: {name}")
+        log.info(f"{banner}removed: {name}")
     elif path.is_dir():
-        if not args.recursive:
-            raise Exception(f"Cannot remove directory {name}. Hint: use -r")
+        if not recursive:
+            err = f"cannot remove directory {name}"
+            err += "\n  tip: use --recursive"
+            raise Exception(err)
         for item in path.iterdir():
-            remove_path(bundle, args, item.at)
+            remove_path(
+                bundle,
+                item.at,
+                force=force,
+                recursive=recursive,
+                dry_run=dry_run,
+            )
         if name in bundle.NameToInfo:  # dir actually has an entry
-            if args.for_real:
+            if for_real:
                 bundle.remove(name)
-            log.info(f"{banner}remove: {name}")
+            log.info(f"{banner}removed: {name}")
 
 
 def run(args: Args) -> int:
@@ -79,7 +96,13 @@ def run(args: Args) -> int:
         bundle = ZipFile2(args.bundle, mode="a")
         for name in args.file:
             # TODO: We need to fix `expand_glob` to only read up to the / before we can use it here.
-            remove_path(bundle, args, name)
+            remove_path(
+                bundle,
+                name,
+                force=args.force,
+                recursive=args.recursive,
+                dry_run=args.dry_run,
+            )
     except Exception as e:
         args.show_error(log, e)
         return 2

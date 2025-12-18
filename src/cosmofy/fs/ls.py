@@ -34,11 +34,11 @@ log = logging.getLogger(__name__)
 usage = f"""\
 List contents of a Cosmopolitan bundle.
 
-Usage: cosmofy fs ls <BUNDLE> [OPTIONS] [<FILE>...]
+Usage: cosmofy fs ls <BUNDLE> [OPTIONS] [FILE]...
 
 Arguments:
 {common_args}
-  <FILE>...                 one or more file patterns to show
+  [FILE]...                 one or more file patterns to show
 
 Filter options:
   -a, --all                 show entries whose name starts with `.`

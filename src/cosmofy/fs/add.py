@@ -11,10 +11,12 @@ import os
 # pkg
 from ..args import common_args
 from ..args import CommonArgs
+from ..args import get_banner
 from ..args import global_options
 from ..baton import arg
 from ..baton import Command
 from ..zipfile2 import ZipFile2
+from .rm import remove_path
 
 
 log = logging.getLogger(__name__)
@@ -40,6 +42,7 @@ Options:
 
 @dataclass
 class Args(CommonArgs):
+    __doc__ = usage
     file: list[str] = arg(list, positional=True, required=True, action="extend")
     chdir: Path | None = arg(None)
     dest: str = arg("")
@@ -47,25 +50,37 @@ class Args(CommonArgs):
     # compile_bytecode: bool = arg(False)
 
 
-def add_path(bundle: ZipFile2, args: Args, src: Path, dest: str) -> None:
-    banner = args.banner
+def add_path(
+    bundle: ZipFile2,
+    src: Path,
+    dest: str,
+    *,
+    force: bool = False,
+    # global
+    dry_run: bool = False,
+) -> None:
+    """Add `src` to `bundle` at location `dest`."""
+    banner = get_banner(dry_run)
+    for_real = not dry_run
+
     if not src.exists():
-        raise FileNotFoundError(f"Cannot find file: {src.resolve()}")
+        raise FileNotFoundError(f"{banner}cannot find file: {src.resolve()}")
 
     if src.is_file():
-        if args.for_real:
-            if bundle.NameToInfo.get(dest) is not None:
-                if args.force:
-                    bundle.remove(dest)
-                else:
-                    raise FileExistsError(
-                        f"File already exists: {dest}\nHint: use -f to overwrite."
-                    )
+        if bundle.NameToInfo.get(dest) is not None:  # already exists
+            if force:
+                remove_path(bundle, dest, force=force, recursive=False, dry_run=dry_run)
+            else:
+                err = f"{banner}file already exists: {dest}"
+                err += "\n  tip: use --force to overwrite it"
+                raise FileExistsError(err)
+
+        if for_real:
             bundle.add_file(dest, src.read_bytes())
-        print(f"{banner}add: {dest}")
+        log.info(f"{banner}added {dest}")
     elif src.is_dir():
         for item in src.iterdir():
-            add_path(bundle, args, item, dest + f"/{item.name}")
+            add_path(bundle, item, dest + f"/{item.name}")
 
 
 def add_files(bundle: ZipFile2, args: Args) -> None:
@@ -79,7 +94,7 @@ def add_files(bundle: ZipFile2, args: Args) -> None:
     prefix = str(root)
     for name in args.file:
         dest = args.dest + name.removeprefix(prefix)
-        add_path(bundle, args, Path(name), dest)
+        add_path(bundle, Path(name), dest, force=args.force, dry_run=args.dry_run)
 
     if args.chdir:
         log.debug(f"change directory: {original}")
