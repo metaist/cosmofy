@@ -20,6 +20,7 @@ from typing import get_type_hints
 from typing import Literal
 from typing import Union
 import logging
+import re
 import sys
 
 Action = Literal[
@@ -55,7 +56,7 @@ def arg(
 ) -> Any:
     """`dataclasses.field` wrapper for argument metadata."""
     if required and not positional:
-        raise ValueError("Optional arguments cannot be required.")
+        raise ValueError("optional arguments cannot be required")
 
     metadata = kwargs.pop("metadata", {})
     metadata["arg"] = ArgMetadata(
@@ -197,9 +198,9 @@ def _do_action(ctx: object, spec: Arg, val: str | list[str] = "") -> None:
 
     if action == "store":
         if spec.choices and val not in spec.choices:
-            raise ValueError(
-                f"Invalid value for {spec.long}: {val!r} (choose from: {', '.join(map(repr, spec.choices))})"
-            )
+            err = f"invalid value '{val}' for {spec.long}"
+            err += f"\n  [choices: {', '.join(spec.choices)}]"
+            raise ValueError(err)
         setattr(ctx, name, kind(val))
     elif action == "store_bool":
         assert isinstance(val, str)
@@ -215,7 +216,7 @@ def _do_action(ctx: object, spec: Arg, val: str | list[str] = "") -> None:
     elif action == "count":
         setattr(ctx, name, getattr(ctx, name) + 1)
     else:
-        raise ValueError(f"Unknown action: {action}")
+        raise ValueError(f"unknown action: '{action}'")
 
 
 def _parse_optional(ctx: object, spec: Arg, argv: list[str]) -> None:
@@ -225,12 +226,18 @@ def _parse_optional(ctx: object, spec: Arg, argv: list[str]) -> None:
         _do_action(ctx, spec, "")
     elif action in ("store", "store_bool", "append"):
         if not argv:
-            raise ValueError(f"Missing value for {spec.long}")
+            err = f"a value is required for {spec.long}, but none was supplied"
+            if spec.choices:
+                err += f"\n  [choices: {', '.join(spec.choices)}]"
+            raise ValueError(err)
         _do_action(ctx, spec, argv.pop(0))
     elif action == "extend":
         vals = _pop_values(argv)
         if not vals:
-            raise ValueError(f"Missing value for {spec.long}")
+            err = f"a value is required for {spec.long}, but none was supplied"
+            if spec.choices:
+                err += f"\n  [choices: {', '.join(spec.choices)}]"
+            raise ValueError(err)
         _do_action(ctx, spec, vals)
 
 
@@ -262,10 +269,10 @@ def _parse(
             elif positionals:
                 for v in argv:
                     if not positionals:
-                        raise ValueError(f"Unexpected argument: {v}")
+                        raise ValueError(f"unexpected argument: '{v}'")
                     _do_action(ctx, positionals.pop(0), v)
             elif argv:
-                raise ValueError(f"Unexpected argument: {argv[0]}")
+                raise ValueError(f"unexpected argument: '{argv[0]}'")
             argv = []
             break
 
@@ -276,7 +283,7 @@ def _parse(
                 if alias := aliases.get(f"-{c}"):
                     expanded.append(alias)
                 else:
-                    raise ValueError(f"Unknown option: -{c}")
+                    raise ValueError(f"unknown option: '-{c}'")
             argv = expanded + argv
             continue
 
@@ -284,18 +291,18 @@ def _parse(
         if val.startswith("--"):
             spec = optionals.get(val)
             if not spec:
-                raise ValueError(f"Unknown option: {val}")
+                raise ValueError(f"unknown option: '{val}'")
             _parse_optional(ctx, spec, argv)
             continue
 
         # Positional
         if not positionals:
-            raise ValueError(f"Unexpected argument: {val}")
+            raise ValueError(f"unexpected argument: '{val}'")
 
         spec = positionals.pop(0)
         # TODO: Mark the positional that is supposed to receive the subcommand name.
         if spec.long == "command" and val not in cmd.subcommands:
-            raise ValueError(f"Unknown subcommand name: {val}")
+            raise ValueError(f"unknown subcommand name: '{val}'")
 
         if spec.action == "extend":
             vals = [val] + _pop_values(argv, set(cmd.subcommands.keys()))
@@ -309,10 +316,10 @@ def _parse(
             break
 
     # Check required
-    missing = [f"<{s.field_name}>" for s in positionals if s.required]
+    missing = [f"<{s.field_name.upper()}>" for s in positionals if s.required]
     if missing and not getattr(ctx, "help", None):
         s = "s" if len(missing) > 1 else ""
-        raise ValueError(f"Missing required argument{s}: {', '.join(missing)}")
+        raise ValueError(f"missing required argument{s}: {', '.join(missing)}")
 
     return ctx, subcommand, argv
 
@@ -355,7 +362,7 @@ class Command:
     def positionals(self) -> list[Arg]:
         return [a for a in self._args if a.positional]
 
-    def show_usage(self, short: bool = False) -> None:
+    def show_usage(self, *, short: bool = False, color: COLOR_MODE = "auto") -> None:
         """Display the usage for this command."""
         usage = self.usage
         if short:
@@ -363,9 +370,11 @@ class Command:
             end: int | None = usage.find("\n\n", beg)
             if end == -1:
                 end = None  # go to the end
-            print(f"\n{usage[beg:end]}\n\nFor more information, try --help")
+            usage = f"\n{usage[beg:end]}\n\nFor more information, try --help."
         else:
-            print(self.usage.strip())
+            usage = self.usage.strip()
+        # print(decorate(usage))
+        print(render_tags(decorate(usage), color=color))
 
     parse = _parse
 
@@ -380,7 +389,7 @@ class Command:
         try:
             args, sub, remaining = _parse(self, argv, parent)
             if getattr(args, "help", False):
-                self.show_usage()
+                self.show_usage(color=getattr(args, "color", "auto"))
                 return 0
 
             if sub:
@@ -390,3 +399,190 @@ class Command:
             log.error(e)
             self.show_usage(short=True)
             return 1
+
+
+COLOR_MODE = Literal["auto", "always", "never"]
+COLOR_CODE: dict[str, str] = {
+    "reset": "0",
+    "bold": "1",
+    "dim": "2",
+    "italic": "3",
+    "underline": "4",
+    "black": "30",
+    "red": "31",
+    "green": "32",
+    "yellow": "33",
+    "blue": "34",
+    "magenta": "35",
+    "cyan": "36",
+    "white": "37",
+}
+
+DEFAULT_THEME = {
+    "heading": "bold green",  # Heading:
+    "command": "bold cyan",  # command
+    "argument": "cyan",  # <ARGUMENT>
+    "option": "cyan",  # [OPTION]
+    "flag": "bold cyan",  # --flag
+    "repeats": "cyan",  # ...
+    "tick": "bold white",  # `tick`
+    "string": "yellow",  # 'yellow'
+    "choice": "green",  # [choices: a, b, c]
+    "default": "yellow",  # [default: value]
+    "env": "white",  # [env: NAME=value]
+}
+
+
+class ColorFormatter(logging.Formatter):
+    """Log formatter that renders [tag]...[/] markup to ANSI colors."""
+
+    def __init__(
+        self,
+        fmt: str | None = None,
+        datefmt: str | None = None,
+        style: Literal["%", "{", "$"] = "%",
+        *,
+        color: COLOR_MODE = "auto",
+    ):
+        super().__init__(fmt, datefmt, style)
+        self.color = color
+        self._stream = None  # check at format time
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Format the log record."""
+        match record.levelname:
+            case "ERROR":
+                level = "[bold red]error[/]"
+            case "WARNING":
+                level = "[bold yellow]warning[/]"
+            case "INFO":
+                level = "[bold cyan]info[/]"
+            case _:
+                level = record.levelname.lower()
+
+        record.levelname = level
+        message = super().format(record)
+        stream = self._stream or sys.stderr
+        return render_tags(decorate(message), color=self.color, file=stream)
+
+    def set_stream(self, stream) -> None:
+        """Set the stream for TTY detection (called by handler)."""
+        self._stream = stream
+
+
+class ColorHandler(logging.StreamHandler):
+    """StreamHandler that automatically configures ColorFormatter's stream.
+
+    Usage:
+        import logging
+        from baton import ColorHandler
+
+        handler = ColorHandler()
+        handler.setFormatter(ColorFormatter("[dim]%(asctime)s[/] %(message)s"))
+        logging.getLogger().addHandler(handler)
+    """
+
+    def setFormatter(self, fmt: logging.Formatter | None) -> None:
+        super().setFormatter(fmt)
+        if isinstance(fmt, ColorFormatter):
+            fmt.set_stream(self.stream)
+
+
+def use_color(color: COLOR_MODE, file: Any) -> bool:
+    """Return `True` if we should output ANSI color codes."""
+    # See: https://no-color.org/
+    # See: https://bixense.com/clicolors/
+    if color == "never" or ENV.get("NO_COLOR") or ENV.get("CLICOLOR") in ["0", "false"]:
+        return False
+    if color == "always" or ENV.get("FORCE_COLOR") or ENV.get("CLICOLOR_FORCE"):
+        return True
+    if not hasattr(file, "isatty") or not file.isatty():
+        return False
+    return ENV.get("TERM", "") != "dumb"
+
+
+def render_tags(
+    text: str,
+    *,
+    color: COLOR_MODE = "auto",
+    file: Any | None = None,
+    theme: dict[str, str] | None = None,
+) -> str:
+    """Render [tag]...[/] markup to ANSI (or strip if no color)."""
+    if theme is None:
+        theme = DEFAULT_THEME
+
+    def replace_tag(m: re.Match):
+        tag = m.group(1).lower()
+        if tag == "/":
+            tag = "reset"
+        tag = theme.get(tag, tag)
+        parts = tag.split()
+        codes = [COLOR_CODE[p] for p in parts if p in COLOR_CODE]
+        if codes:
+            return f'\033[{";".join(codes)}m'
+        return m.group(0)  # Unknown tag, leave as-is
+
+    if use_color(color, sys.stdout if file is None else file):
+        return re.sub(r"\[([^[\]]+)\]", replace_tag, text)
+    else:
+        return re.sub(r"\[/?[^\]]*\]", "", text)
+
+
+def decorate(text: str) -> str:
+    """Apply theme markings."""
+    result = text
+
+    # Usage: command
+    # starts with usage and everything up to the first non lowercase word
+    result = re.sub(r"Usage: ([a-z ]+)", r"Usage: [command]\1[/]", result)
+
+    # Heading:
+    # start of a line, starts with a capital letter ends with a colon
+    result = re.sub(r"\n([A-Z][^:]+:)", r"\n[heading]\1[/]", result)
+
+    # command
+    # two spaces before and after, all lowercase, can have dashes
+    result = re.sub(r"  ([a-z][-_a-z]+)  ", r"  [command]\1[/]  ", result)
+
+    # [OPTION], [<OPTION>...]
+    result = re.sub(r"\[([<A-Z_>]+)\]", r"[option][\1][/]", result)
+
+    # <ARGUMENT>
+    result = re.sub(r"<([A-Z_]+)>", r"[argument]<\1>[/]", result)
+
+    # `--flag`, --flag
+    result = re.sub(r"`(-[-A-Za-z]+)`", r"[flag]\1[/]", result)
+    result = re.sub(r"(\s+)(-[-A-Za-z]+)", r"\1[flag]\2[/]", result)
+
+    # `tick`
+    result = re.sub(r"`([^`]+)`", r"[tick]\1[/]", result)
+
+    # 'string'
+    result = re.sub(r"'([^']+)'", r"'[string]\1[/]'", result)
+
+    # repeats
+    result = re.sub(r"([a-z\]>])(\.\.\.)", r"\1[repeats]\2[/]", result)
+
+    # [default: value]
+    result = re.sub(r"\[default: ([^\]]+)\]", r"[default: [default]\1[/]]", result)
+
+    # [env: NAME=value]
+    result = re.sub(
+        r"\[env: ([^=]+)=([^\]]*)\]", r"[env: [env]\1[/]=[default]\2[/]]", result
+    )
+
+    # [choices: a, b, c]
+    result = re.sub(
+        r"\[(choices|possible values):\s*([^\]]+)\]",
+        lambda m: f"[{m.group(1)}: "
+        + re.sub(
+            r"\s*,\s*",
+            ", ",
+            re.sub(r"\s*([^,\]]+)\s*", r"[choice]\1[/]", m.group(2)).strip(),
+        )
+        + "]",
+        result,
+    )
+
+    return result
