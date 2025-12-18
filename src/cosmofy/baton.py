@@ -373,8 +373,9 @@ class Command:
             usage = f"\n{usage[beg:end]}\n\nFor more information, try --help."
         else:
             usage = self.usage.strip()
-        # print(decorate(usage))
-        print(render_tags(decorate(usage), color=color))
+        if color in ("auto", "always"):
+            usage = decorate(usage)
+        print(render_tags(usage, color=color))
 
     parse = _parse
 
@@ -430,6 +431,7 @@ DEFAULT_THEME = {
     "choice": "green",  # [choices: a, b, c]
     "default": "yellow",  # [default: value]
     "env": "white",  # [env: NAME=value]
+    "tip": "green",  # tip:
 }
 
 
@@ -463,7 +465,9 @@ class ColorFormatter(logging.Formatter):
         record.levelname = level
         message = super().format(record)
         stream = self._stream or sys.stderr
-        return render_tags(decorate(message), color=self.color, file=stream)
+        if self.color in ("auto", "always"):
+            message = decorate(message)
+        return render_tags(message, color=self.color, file=stream)
 
     def set_stream(self, stream) -> None:
         """Set the stream for TTY detection (called by handler)."""
@@ -526,7 +530,7 @@ def render_tags(
     if use_color(color, sys.stdout if file is None else file):
         return re.sub(r"\[([^[\]]+)\]", replace_tag, text)
     else:
-        return re.sub(r"\[/?[^\]]*\]", "", text)
+        return re.sub(r"\[/?[a-z ]*\]", "", text)
 
 
 def decorate(text: str) -> str:
@@ -539,13 +543,13 @@ def decorate(text: str) -> str:
 
     # Heading:
     # start of a line, starts with a capital letter ends with a colon
-    result = re.sub(r"\n([A-Z][^:]+:)", r"\n[heading]\1[/]", result)
+    result = re.sub(r"\n([A-Z][^\n:]+:)", r"\n[heading]\1[/]", result)
 
     # command
     # two spaces before and after, all lowercase, can have dashes
     result = re.sub(r"  ([a-z][-_a-z]+)  ", r"  [command]\1[/]  ", result)
 
-    # [OPTION], [<OPTION>...]
+    # [OPTION], [OPTION...]
     result = re.sub(r"\[([<A-Z_>]+)\]", r"[option][\1][/]", result)
 
     # <ARGUMENT>
@@ -563,6 +567,9 @@ def decorate(text: str) -> str:
 
     # repeats
     result = re.sub(r"([a-z\]>])(\.\.\.)", r"\1[repeats]\2[/]", result)
+
+    # tip:
+    result = re.sub(r"  tip:", r"  [tip]tip:[/]", result)
 
     # [default: value]
     result = re.sub(r"\[default: ([^\]]+)\]", r"[default: [default]\1[/]]", result)
