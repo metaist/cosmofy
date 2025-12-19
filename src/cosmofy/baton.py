@@ -373,7 +373,7 @@ class Command:
             usage = f"\n{usage[beg:end]}\n\nFor more information, try --help."
         else:
             usage = self.usage.strip()
-        if color in ("auto", "always"):
+        if use_color(color, sys.stdout):
             usage = decorate(usage)
         print(render_tags(usage, color=color))
 
@@ -496,10 +496,20 @@ def use_color(color: COLOR_MODE, file: Any) -> bool:
     """Return `True` if we should output ANSI color codes."""
     # See: https://no-color.org/
     # See: https://bixense.com/clicolors/
-    if color == "never" or ENV.get("NO_COLOR") or ENV.get("CLICOLOR") in ["0", "false"]:
+
+    # cli
+    if color == "never":
         return False
-    if color == "always" or ENV.get("FORCE_COLOR") or ENV.get("CLICOLOR_FORCE"):
+    if color == "always":
         return True
+
+    # env
+    if ENV.get("NO_COLOR") or ENV.get("CLICOLOR") in ["0", "false"]:
+        return False
+    if ENV.get("FORCE_COLOR") or ENV.get("CLICOLOR_FORCE"):
+        return True
+
+    # auto
     if not hasattr(file, "isatty") or not file.isatty():
         return False
     return ENV.get("TERM", "") != "dumb"
