@@ -73,7 +73,7 @@ def run(args: Args) -> int:
         if args.val:
             set_args(bundle, args.val, dry_run=args.dry_run)
         else:
-            print(get_args(bundle))  # don't log!
+            print(get_args(bundle), flush=True)  # don't log!
     except Exception as e:
         args.show_error(log, e)
         return 2

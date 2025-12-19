@@ -59,7 +59,7 @@ def show_files(bundle: ZipFile2, args: Args) -> None:
             if args.for_real:
                 print(bundle.read(name, password).decode("utf-8"), flush=True)
             else:
-                print(f"{banner}<show contents of {name}>", flush=True)
+                log.info(f"{banner}show: {name}")
 
 
 def run(args: Args) -> int:

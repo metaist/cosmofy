@@ -246,7 +246,7 @@ def run(args: Args) -> int:
     try:
         assert args.ensure_bundle() and args.bundle
         if args.dry_run:
-            print(f"{args.banner}<list contents of {args.bundle}>")
+            log.info(f"{args.banner}list: {args.bundle}")
             return 0
 
         if args.ignore_backups:
