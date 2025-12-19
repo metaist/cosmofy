@@ -57,7 +57,7 @@ def remove_path(
     banner = get_banner(dry_run)
     for_real = not dry_run
 
-    path = ZipPath(bundle, name)
+    path = ZipPath(bundle.filename or "", name)
     if not path.exists():
         if force:
             return
