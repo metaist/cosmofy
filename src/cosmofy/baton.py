@@ -277,7 +277,7 @@ def _parse(
             break
 
         # Expand -vvv -> --verbose --verbose --verbose
-        if val.startswith("-") and not val.startswith("--"):
+        if val.startswith("-") and not val.startswith("--") and " " not in val:
             expanded = []
             for c in val[1:]:
                 if alias := aliases.get(f"-{c}"):
@@ -288,7 +288,7 @@ def _parse(
             continue
 
         # Optional
-        if val.startswith("--"):
+        if val.startswith("--") and " " not in val:
             spec = optionals.get(val)
             if not spec:
                 raise ValueError(f"unknown option: '{val}'")
