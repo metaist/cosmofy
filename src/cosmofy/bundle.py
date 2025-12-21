@@ -1,0 +1,394 @@
+#!/usr/bin env python
+
+# std
+from __future__ import annotations
+from dataclasses import dataclass
+from importlib.metadata import distributions
+from os import environ as ENV
+from pathlib import Path
+from typing import Literal
+import logging
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+import zipfile
+
+# pkg
+from .args import global_options
+from .args import GlobalArgs
+from .baton import arg
+from .baton import Command
+from .fs.add import add_path
+from .fs.args import set_args
+from .updater.downloader import download
+from .updater.downloader import download_if_newer
+from .updater.downloader import move_executable
+from .updater.pythonoid import python_call
+from .updater.receipt import get_version
+from .zipfile2 import ZipFile2
+
+
+log = logging.getLogger(__name__)
+
+
+DEFAULT_PYTHON_URL = "https://cosmo.zip/pub/cosmos/bin/python"
+"""Default URL to download python from."""
+
+COSMOFY_PYTHON_URL = ENV.get("COSMOFY_PYTHON_URL", "")
+"""URL to download python from."""
+
+COSMOFY_NO_CACHE = ENV.get("COSMOFY_NO_CACHE", "")
+"""Whether to disable cache."""
+
+DEFAULT_CACHE_DIR = Path.home() / ".cache" / "cosmofy"
+"""Default cache directory."""
+
+COSMOFY_CACHE_DIR = ENV.get("COSMOFY_CACHE_DIR", "")
+"""Path to cache directory."""
+
+RECEIPT_URL = ENV.get("RECEIPT_URL", "")
+"""Default receipt URL."""
+
+RELEASE_URL = ENV.get("RELEASE_URL", "")
+"""Default release URL."""
+
+
+usage = f"""\
+Build a Python project into a Cosmopolitan bundle.
+
+Usage: cosmofy bundle [OPTIONS]
+
+Input options:
+      --entry <NAME>        `console_script` entry points to bundle
+      --script <PATH>       paths to bundle
+
+      If neither --entry nor --script is specified, all entry points
+      will be bundled. If both are specified, entries will be bundled first.
+
+      --python-url <URL>    URL from which to download Cosmopolitan Python
+                            [default: {DEFAULT_PYTHON_URL}]
+                            [env: COSMOFY_PYTHON_URL={COSMOFY_PYTHON_URL}]
+
+Output options:
+  -o, --output-dir <PATH>   output directory
+                            [default: project-root/dist]
+
+Cache options:
+  -n, --no-cache            do not read or save to the cache
+                            [env: COSMOFY_NO_CACHE={COSMOFY_NO_CACHE}]
+      --cache-dir <PATH>    store Cosmopolitan Python downloads
+                            [default: {str(DEFAULT_CACHE_DIR).replace(str(Path.home()), "~")}]
+                            [env: COSMOFY_CACHE_DIR={COSMOFY_CACHE_DIR}]
+
+{global_options}
+"""
+
+
+@dataclass
+class Args(GlobalArgs):
+    __doc__ = usage
+
+    # input
+    entry: list[str] = arg(list)
+    script: list[Path] = arg(list)
+    python_url: str = arg(DEFAULT_PYTHON_URL, env="COSMOFY_PYTHON_URL")
+
+    # output
+    output_dir: Path | None = arg(None)
+
+    # # self-updater
+    # receipt: Path | None = arg(None)
+    # receipt_url: str = arg("", env="RECEIPT_URL")
+    # release_url: str = arg("", env="RELEASE_URL")
+    # release_version: str = arg("")
+
+    # cache
+    no_cache: bool = arg(False, short="-n", env="COSMOFY_NO_CACHE")
+    cache_dir: Path = arg(DEFAULT_CACHE_DIR, env="COSMOFY_CACHE_DIR")
+
+
+def open_zip(file: str | Path, *, mode: Literal["r", "w", "x", "a"] = "r") -> ZipFile2:
+    """Wrapper for creating a zip file."""
+    return ZipFile2(file, mode, compression=zipfile.ZIP_DEFLATED, compresslevel=9)
+
+
+def ensure_uv(cmd: str = "uv") -> bool:
+    """Raise an error if `uv` is not installed."""
+    result = shutil.which(cmd)
+    if not result:
+        err = f"cannot find command: `{cmd}`"
+        err += "\n  tip: see https://docs.astral.sh/uv/getting-started/installation/"
+        raise FileNotFoundError(err)
+    log.debug(f"`uv` installed at {result}")
+    return True
+
+
+def bash(cmd: str, **kwargs) -> str:
+    result = ""
+    for v in ("check", "shell", "capture_output"):
+        if v not in kwargs:
+            kwargs[v] = True
+    out = subprocess.run(cmd, **kwargs)
+    if kwargs["capture_output"]:
+        result = out.stdout.decode("utf-8")
+    return result
+
+
+def find_project_root(start: Path | None = None) -> Path:
+    start = (start or Path.cwd()).resolve()
+    for d in (start, *start.parents):
+        if (d / "pyproject.toml").is_file():
+            return d
+    raise FileNotFoundError("no `pyproject.toml` found")
+
+
+def venv_site_packages(venv: Path) -> Path:
+    # posix: venv/lib/pythonX.Y/site-packages
+    lib = venv / "lib"
+    if lib.is_dir():
+        candidates = sorted(lib.glob("python*/site-packages"))
+        if candidates:
+            return candidates[-1]
+    # windows: venv/Lib/site-packages
+    sp = venv / "Lib" / "site-packages"
+    if sp.is_dir():
+        return sp
+    raise FileNotFoundError(f"cannot find `site-packages` in {venv}")
+
+
+def console_scripts_from_venv(venv: Path) -> dict[str, str]:
+    sp = venv_site_packages(venv)
+    out: dict[str, str] = {}
+    for dist in distributions(path=[str(sp)]):
+        for ep in dist.entry_points:
+            if ep.group == "console_scripts":
+                out[ep.name] = ep.value
+    return out
+
+
+class Bundler:
+    args: Args
+    banner: str
+
+    bundle: ZipFile2
+
+    def __init__(self, args: Args):
+        """Construct a bundler."""
+        self.args = args
+        self.banner = args.banner
+
+    # File System
+
+    def fs_copy(self, src: Path, dest: Path) -> Path:
+        """Copy a file from `src` to `dest`."""
+        log.debug(f"{self.banner}copy: {src} to {dest}")
+        if self.args.for_real:
+            shutil.copy(src, dest)
+        return dest
+
+    def fs_move_executable(self, src: Path, dest: Path) -> Path:
+        """Move a file and set its executable bit."""
+        log.debug(f"{self.banner}move executable: {src} to {dest}")
+        if self.args.for_real:
+            move_executable(src, dest)
+        return dest
+
+    def from_cache(self, src: Path, dest: Path) -> Path:
+        """Copy the archive from cache."""
+        log.debug(f"{self.banner}download (if newer): {self.args.python_url}")
+        if self.args.for_real:
+            download_if_newer(self.args.python_url, src)
+        return self.fs_copy(src, dest)
+
+    def from_download(self, dest: Path) -> Path:
+        """Download archive."""
+        log.debug(f"{self.banner}download (fresh): {self.args.python_url} to {dest}")
+        if self.args.for_real:
+            download(self.args.python_url, dest)
+        return dest
+
+    def get_cosmo_python(self, dest: Path) -> Path:
+        if self.args.no_cache:  # fresh
+            return self.from_download(dest)
+        return self.from_cache(self.args.cache_dir / "python", dest)
+
+    def uv_sync(
+        self,
+        version: str,
+        venv: Path,
+        script: Path | None = None,
+    ) -> Path:
+        """Return the venv used during `uv sync`."""
+        args: list[str] = ["uv", "sync", "--python", version, "--no-editable"]
+        env: dict[str, str] = {**ENV}
+        env["VIRTUAL_ENV"] = str(venv)
+        env["UV_PROJECT_ENVIRONMENT"] = str(venv)
+
+        if script:
+            args.extend(["--script", str(script)])
+        else:
+            args.append("--no-default-groups")
+
+        if self.args.verbosity > 0:
+            args.append(f"-{'v' * self.args.verbosity}")
+        elif self.args.verbosity < 0:
+            args.append(f"-{'q' * abs(self.args.verbosity)}")
+        if self.args.dry_run:
+            args.append("--dry-run")
+
+        cmd = shlex.join(args)
+        log.debug(f"{self.banner}run: {cmd}")
+        if self.args.for_real:
+            out = subprocess.run(
+                cmd, capture_output=True, check=True, shell=True, env=env
+            )
+
+            # NOTE: `uv sync --script` doesn't respect environment variables.
+            # TODO: Fix this brittle check.
+            pattern = r"script environment at: (.*)\n"
+            string = out.stderr.decode("utf-8")
+            if match := re.search(pattern, string):
+                venv = Path(match.group(1))
+
+        log.info(f"{self.banner}uv sync")
+        return venv
+
+    def bundle_venv(self, bundle: ZipFile2, venv: Path) -> ZipFile2:
+        """Bundle a `venv` into `bundle`."""
+        pkgs = venv_site_packages(venv)
+        for dirname, _, files in os.walk(pkgs):
+            for f in files:
+                src = Path(dirname) / f
+                rel = src.relative_to(pkgs)
+                dest = "/".join(("Lib",) + rel.parts)
+                add_path(bundle, src, dest, dry_run=self.args.dry_run)
+        return bundle
+
+    def bundle_entry_point(
+        self,
+        src: Path,
+        dest: Path,
+        *,
+        entry_point: str,
+        venv: Path | None = None,
+    ) -> Path:
+        """Return `Path` to the build entry point."""
+        self.fs_copy(src, dest)
+        bundle = open_zip(dest, mode="a")
+        if venv:
+            self.bundle_venv(bundle, venv)
+        set_args(bundle, python_call(entry_point), dry_run=self.args.dry_run)
+
+        log.info(f"bundled: {dest}")
+        return dest
+
+    def bundle_entry_points(
+        self,
+        version: str,
+        venv: Path,
+        cosmo_python: Path,
+        output_dir: Path,
+    ) -> dict[str, Path]:
+        """Return mapping of entry point names to their bundle paths."""
+        result: dict[str, Path] = {}
+
+        venv = self.uv_sync(version, venv)
+        # have all deps built
+
+        entry_points = console_scripts_from_venv(venv)
+        if not self.args.entry:
+            self.args.entry = list(entry_points.keys())
+
+        for name in self.args.entry:
+            if name not in entry_points:
+                err = f"could not find entry point: '{name}'"
+                err += "  tip: look at `[project.scripts]` in `pyproject.toml`"
+                raise ValueError(err)
+        # all entry points exist
+
+        name = self.args.entry[0]
+        first = self.bundle_entry_point(
+            src=cosmo_python,
+            dest=output_dir / name,
+            venv=venv,
+            entry_point=entry_points[name],
+        )
+        result[name] = first
+        for name in self.args.entry[1:]:  # bundle rest by replacing .args
+            result[name] = self.bundle_entry_point(
+                first,
+                output_dir / name,
+                entry_point=entry_points[name],
+            )
+        # all entry points built
+        return result
+
+    def bundle_script(
+        self,
+        version: str,
+        venv: Path,
+        cosmo_python: Path,
+        output_dir: Path,
+        script: Path,
+    ) -> Path:
+        if not script.is_file():
+            raise FileNotFoundError(f"cannot find script file: {script}")
+
+        dest = self.fs_copy(cosmo_python, output_dir / script.stem)
+        bundle = self.bundle_venv(
+            open_zip(dest, mode="a"),
+            self.uv_sync(version, venv, script),
+        )
+        add_path(bundle, script, script.name, dry_run=self.args.dry_run)
+        set_args(bundle, script.name, dry_run=self.args.dry_run)
+
+        log.info(f"bundled: {dest}")
+        return script
+
+    def run(self) -> None:
+        if not self.args.output_dir:
+            self.args.output_dir = find_project_root() / "dist"
+        self.args.output_dir.mkdir(parents=True, exist_ok=True)
+        # we have an output dir
+
+        cosmo_temp = tempfile.TemporaryDirectory(prefix="cosmofy-python-")
+        cosmo_python = self.get_cosmo_python(Path(cosmo_temp.name) / "python")
+        version = get_version(cosmo_python)
+        if not version:
+            raise ValueError("could not get Cosmopolitan Python version")
+        # have cosmo python + version
+
+        venv = Path(tempfile.TemporaryDirectory(prefix="cosmofy-venv-").name)
+        if self.args.entry or (not self.args.entry and not self.args.script):
+            self.bundle_entry_points(version, venv, cosmo_python, self.args.output_dir)
+        # all entry points built
+
+        for script in self.args.script:
+            self.bundle_script(
+                version, venv, cosmo_python, self.args.output_dir, script
+            )
+        # all scripts built
+
+
+# install updater
+
+
+def run(args: Args) -> int:
+    args.setup_logger()
+    try:
+        ensure_uv()
+        Bundler(args).run()
+    except Exception as e:
+        args.show_error(log, e)
+        return 2
+    return 0
+
+
+cmd = Command("cosmofy.bundle", Args, run)
+
+if __name__ == "__main__":
+    sys.exit(cmd.main())
