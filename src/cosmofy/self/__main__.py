@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+
+# std
+from __future__ import annotations
+from dataclasses import dataclass
+import logging
+import sys
+
+# pkg
+from ..args import global_options
+from ..args import GlobalArgs
+from ..baton import arg
+from ..baton import Command
+from .version import cmd as version
+
+
+log = logging.getLogger(__name__)
+
+usage = f"""\
+Manage the `cosmofy` executable.
+
+Usage: cosmofy self [OPTIONS] <COMMAND>
+
+Commands:
+  update                    update `cosmofy`
+  version                   display `cosmofy`'s version
+
+{global_options}
+"""
+
+
+@dataclass
+class Args(GlobalArgs):
+    __doc__ = usage
+    command: str = arg("", positional=True)  # optional so we can show usage
+
+
+def run(_: Args) -> int:
+    # NOTE: only called when there was no subcommand found
+    cmd.show_usage()
+    return 0
+
+
+cmd = Command(
+    "cosmofy.self",
+    Args,
+    run,
+    subcommands={
+        # "update": update,
+        "version": version,
+    },
+)
+
+if __name__ == "__main__":
+    sys.exit(cmd.main())
