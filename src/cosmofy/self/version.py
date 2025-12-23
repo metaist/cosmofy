@@ -7,9 +7,7 @@ from importlib.metadata import version
 from typing import Literal
 import json
 import logging
-import os
 import sys
-
 
 # pkg
 from ..args import global_options

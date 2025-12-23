@@ -7,12 +7,12 @@ import logging
 import sys
 
 # pkg
-from ..args import global_options
-from ..args import GlobalArgs
-from ..baton import arg
-from ..baton import Command
-from .version import cmd as version
-
+from cosmofy.args import global_options
+from cosmofy.args import GlobalArgs
+from cosmofy.baton import arg
+from cosmofy.baton import Command
+from cosmofy.self.update import cmd as update
+from cosmofy.self.version import cmd as version
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ cmd = Command(
     Args,
     run,
     subcommands={
-        # "update": update,
+        "update": update,
         "version": version,
     },
 )

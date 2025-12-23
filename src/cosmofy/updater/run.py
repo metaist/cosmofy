@@ -11,25 +11,20 @@ import sys
 import zipfile
 
 # pkg
-from . import __pubdate__
-from . import __version__
-from .downloader import download_receipt
+from .. import __pubdate__
+from .. import __version__
+from .add import RECEIPT_URL
+from .add import RELEASE_URL
+from .check import check
 from .downloader import download_release
 from .pythonoid import run_python
-from .receipt import Receipt
 
 log_normal = "%(levelname)s: %(message)s"
 log_debug = "%(name)s.%(funcName)s: %(levelname)s: %(message)s"
 log = logging.getLogger(__name__)
 
 
-PATH_COSMOFY = "Lib/site-packages/cosmofy"
-"""Path within zip file to cosmofy package."""
-
-PATH_RECEIPT = f"{PATH_COSMOFY}/.cosmofy.json"
-"""Path within the zip file to the local receipt."""
-
-USAGE = f"""\
+usage = f"""\
 This program is bundled into Cosmopolitan Python apps
 to give them the ability to update themselves.
 See: https://github.com/metaist/cosmofy
@@ -42,32 +37,21 @@ Options:
   --version         Show updater version and exit.
   --debug           Show debug messages.
 
-  [env: RECEIPT_URL={ENV.get("RECEIPT_URL", "")}]
+  [env: RECEIPT_URL={RECEIPT_URL}]
   Override the embedded URL for downloading update metadata.
 
-  [env: RELEASE_URL={ENV.get("RELEASE_URL", "")}]
+  [env: RELEASE_URL={RELEASE_URL}]
   Override the published URL for downloading the update.
 """
 
 
 def self_update(path: Path) -> int:
     """Run the self-updater."""
-    with zipfile.ZipFile(path, "r") as f:
-        local = Receipt.from_dict(json.loads(f.read(PATH_RECEIPT)))
-        log.debug(f"Embedded receipt: {local}")
 
-    url = ENV.get("RECEIPT_URL", local.receipt_url)
-    log.debug(f"Receipt URL: {url}")
-
-    remote = download_receipt(url)
-    log.debug(f"Published receipt: {remote}")
-    if not remote:
-        return 1
-
-    if not remote.is_newer(local):
-        log.info("No updates found.")
+    bundle = zipfile.ZipFile(path, "r")
+    is_newer, local, remote = check(bundle, receipt_url=RECEIPT_URL, dry_run=False)
+    if not is_newer:
         return 0
-    log.info(f"New version found: {remote.version} ({remote.date})")
 
     url = ENV.get("RELEASE_URL", remote.release_url)
     dest = download_release(url, path, remote.hash, remote.algo)
@@ -83,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
     args = argv or sys.argv[1:]
     if "--self-update" in args:
         if "-h" in args or "--help" in args:
-            print(USAGE, end="")
+            print(usage, end="")
             return 0
         if "--version" in args:
             print(f"cosmofy.updater {__version__} ({__pubdate__})")
