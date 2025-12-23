@@ -47,6 +47,7 @@ class Args(CommonArgs):
 
 
 def show_files(bundle: ZipFile2, args: Args) -> None:
+    """Print out the contents of the files."""
     banner = args.banner
 
     password: bytes | None = None

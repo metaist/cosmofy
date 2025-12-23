@@ -18,6 +18,7 @@ DRY_RUN = "[`DRY RUN`] "
 
 
 def get_banner(dry_run: bool = False) -> str:
+    """Return `DRY_RUN` banner if `dry_run` is `True`."""
     return DRY_RUN if dry_run else ""
 
 
@@ -53,6 +54,7 @@ class GlobalArgs:
 
     @property
     def verbosity(self) -> int:
+        """Return how verbose vs quiet we should be."""
         return self.verbose - self.quiet
 
     @property
@@ -67,6 +69,7 @@ class GlobalArgs:
 
     @property
     def banner(self) -> str:
+        """Return dry run banner, if required."""
         return get_banner(self.dry_run)
 
     def setup_logger(self) -> None:

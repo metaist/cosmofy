@@ -45,6 +45,7 @@ class Args(GlobalArgs):
 
 
 def run(args: Args) -> int:
+    """Main entry point for `cosmofy`."""
     args.setup_logger()
     if args.version:
         print_version()

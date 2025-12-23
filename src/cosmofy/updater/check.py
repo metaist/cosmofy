@@ -93,6 +93,7 @@ def check(
 
 
 def run(args: Args) -> int:
+    """Main entry point for `cosmofy updater check`."""
     args.setup_logger()
     try:
         assert args.ensure_bundle() and args.bundle

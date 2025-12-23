@@ -119,11 +119,13 @@ class Arg:
 
     @staticmethod
     def from_class(spec: type) -> list[Arg]:
+        """Return list of arguments from a class."""
         hints = get_type_hints(spec)
         return [Arg.from_field(f, hints) for f in fields(spec)]
 
     @classmethod
     def from_field(cls, f: Field[Any], type_hints: dict[str, type]) -> Arg:
+        """Return an argument constructed from a field."""
         kind = type_hints.get(f.name, str)
         if choices_info := get_choices(kind):
             item_type, choices = choices_info
@@ -343,24 +345,29 @@ class Command:
     _args: list[Arg] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self) -> None:
+        """Make some adjustments after the dataclass is built."""
         self._args = Arg.from_class(self.cls)
         if not self.usage:
             self.usage = dedent(self.cls.__doc__ or "")
 
     @property
     def args(self) -> list[Arg]:
+        """Return the current args."""
         return self._args
 
     @property
     def aliases(self) -> dict[str, str]:
+        """Return argument aliases mapped to their long counter-parts."""
         return {a.short: a.long for a in self._args if a.short}
 
     @property
     def optionals(self) -> dict[str, Arg]:
+        """Return optional arguments."""
         return {a.long: a for a in self._args if not a.positional}
 
     @property
     def positionals(self) -> list[Arg]:
+        """Return list of positional arguments."""
         return [a for a in self._args if a.positional]
 
     def show_usage(self, *, short: bool = False, color: COLOR_MODE = "auto") -> None:
@@ -450,6 +457,7 @@ class ColorFormatter(logging.Formatter):
         *,
         color: COLOR_MODE = "auto",
     ):
+        """Construct a new `ColorFormatter`."""
         super().__init__(fmt, datefmt, style)
         self.color = color
         self._stream = None  # check at format time
@@ -493,6 +501,7 @@ class ColorHandler(logging.StreamHandler):  # type: ignore
     """
 
     def setFormatter(self, fmt: logging.Formatter | None) -> None:
+        """Set the formatter."""
         super().setFormatter(fmt)
         if isinstance(fmt, ColorFormatter):
             fmt.set_stream(self.stream)
@@ -533,6 +542,7 @@ def render_tags(
         theme = DEFAULT_THEME
 
     def replace_tag(m: re.Match[str]) -> str:
+        """Return the string with the tag replaced."""
         tag = m.group(1).lower()
         if tag == "/":
             tag = "reset"

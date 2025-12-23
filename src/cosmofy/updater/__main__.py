@@ -40,6 +40,7 @@ class Args(GlobalArgs):
 
 
 def run(_: Args) -> int:
+    """Main entry point for `cosmofy updater`."""
     # NOTE: only called when there was no subcommand found
     cmd.show_usage()
     return 0

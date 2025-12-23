@@ -116,18 +116,8 @@ def ensure_uv(cmd: str = "uv") -> bool:
     return True
 
 
-def bash(cmd: str, **kwargs: Any) -> str:
-    result = ""
-    for v in ("check", "shell", "capture_output"):
-        if v not in kwargs:
-            kwargs[v] = True
-    out = subprocess.run(cmd, **kwargs)
-    if kwargs["capture_output"]:
-        result = out.stdout.decode("utf-8")
-    return result
-
-
 def find_project_root(start: Path | None = None) -> Path:
+    """Return the first path that has a `pyproject.toml` in it."""
     start = (start or Path.cwd()).resolve()
     for d in (start, *start.parents):
         if (d / "pyproject.toml").is_file():
@@ -136,6 +126,7 @@ def find_project_root(start: Path | None = None) -> Path:
 
 
 def venv_site_packages(venv: Path) -> Path:
+    """Return the path to `site-packages`."""
     # posix: venv/lib/pythonX.Y/site-packages
     lib = venv / "lib"
     if lib.is_dir():
@@ -150,6 +141,7 @@ def venv_site_packages(venv: Path) -> Path:
 
 
 def console_scripts_from_venv(venv: Path) -> dict[str, str]:
+    """Return `console_scripts` in a `venv`."""
     # TODO fix this to only get the console_scripts for the current package.
     sp = venv_site_packages(venv)
     out: dict[str, str] = {}
@@ -204,6 +196,7 @@ class Bundler:
         return dest
 
     def get_cosmo_python(self, dest: Path) -> Path:
+        """Return a `Path` a Cosmopolitan Python executable."""
         if self.args.no_cache:  # fresh
             return self.from_download(dest)
         return self.from_cache(self.args.cache_dir / "python", dest)
@@ -350,6 +343,7 @@ class Bundler:
         output_dir: Path,
         script: Path,
     ) -> Path:
+        """Bundle an individual script."""
         if not script.is_file():
             raise FileNotFoundError(f"cannot find script file: {script}")
 
@@ -365,6 +359,7 @@ class Bundler:
         return script
 
     def run(self) -> None:
+        """Build a venv and bundle it into a Cosmopolitan Python executable."""
         if not self.args.output_dir:
             self.args.output_dir = find_project_root() / "dist"
         self.args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -398,6 +393,7 @@ class Bundler:
 
 
 def run(args: Args) -> int:
+    """Main entry point for `cosmofy bundle`."""
     args.setup_logger()
     try:
         ensure_uv()
