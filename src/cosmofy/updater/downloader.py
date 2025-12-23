@@ -44,8 +44,11 @@ def progress(response: HTTPResponse, prefix: str = "Downloading: ") -> Iterator[
     done = 0
     while chunk := response.read(CHUNK_SIZE):
         done += len(chunk)
-        percent = done / total * 100
-        print(f"\r{prefix}{percent:.2f}%", end="", flush=True, file=sys.stderr)
+        if total > 0:
+            percent = done / total * 100
+            print(f"\r{prefix}{percent:.2f}%", end="", flush=True)
+        else:
+            print(f"\r{prefix}{done} bytes", end="", flush=True)
         yield chunk
     print("")
 
