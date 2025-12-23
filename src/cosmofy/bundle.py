@@ -314,7 +314,7 @@ class Bundler:
         for name in self.args.entry:
             if name not in entry_points:
                 err = f"could not find entry point: '{name}'"
-                err += "  tip: look at `[project.scripts]` in `pyproject.toml`"
+                err += "\n  tip: look at `[project.scripts]` in `pyproject.toml`"
                 raise ValueError(err)
         # all entry points exist
 
