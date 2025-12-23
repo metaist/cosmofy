@@ -12,7 +12,7 @@ from urllib.request import Request
 from urllib.request import urlopen
 import hashlib
 import logging
-import shutil
+import os
 import stat
 import tempfile
 
@@ -32,7 +32,9 @@ def move_executable(src: Path, dest: Path) -> Path:
     src.chmod(mode)
 
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(src, dest)
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+    os.replace(tmp, dest)
+
     log.debug(f"move: {src} to {dest}")
     return dest
 
@@ -56,10 +58,17 @@ def progress(response: HTTPResponse, prefix: str = "Downloading: ") -> Iterator[
 def download(url: str, path: Path, timeout: int = COSMOFY_TIMEOUT) -> Path:
     """Download `url` to path."""
     log.info(f"download: {url} to {path}")
+
     path.parent.mkdir(parents=True, exist_ok=True)
-    with urlopen(url, timeout=timeout) as response, path.open("wb") as output:
-        for chunk in progress(response):
-            output.write(chunk)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    try:
+        with urlopen(url, timeout=timeout) as response, tmp.open("wb") as output:
+            for chunk in progress(response):
+                output.write(chunk)
+        os.replace(tmp, path)
+    except:  # handle partial downloads
+        tmp.unlink(missing_ok=True)
+        raise
     return path
 
 
@@ -90,12 +99,18 @@ def download_and_hash(
 ) -> str:
     """Download `url` to `path` and return the hash."""
     log.info(f"download: {url} to {path}")
-    path.parent.mkdir(parents=True, exist_ok=True)
     digest = hashlib.new(algo)
-    with urlopen(url, timeout=timeout) as response, path.open("wb") as output:
-        for chunk in progress(response):
-            digest.update(chunk)
-            output.write(chunk)
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    try:
+        with urlopen(url, timeout=timeout) as response, tmp.open("wb") as output:
+            for chunk in progress(response):
+                digest.update(chunk)
+                output.write(chunk)
+    except:  # handle partial download
+        tmp.unlink(missing_ok=True)
+        raise
     return digest.hexdigest()
 
 
