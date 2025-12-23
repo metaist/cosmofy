@@ -14,7 +14,6 @@ import hashlib
 import logging
 import shutil
 import stat
-import sys
 import tempfile
 
 # pkg
