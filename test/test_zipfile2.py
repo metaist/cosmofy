@@ -13,6 +13,15 @@ import pytest
 from cosmofy.zipfile2 import ZipFile2
 
 
+def test_add_file() -> None:
+    """Add a file."""
+    file = ZipFile2(io.BytesIO(), "a")
+
+    data = b"hello world"
+    file.add_file("/test.txt", data)
+    assert file.read("/test.txt") == data
+
+
 def test_errors() -> None:
     """Run time errors."""
     file = ZipFile2(io.BytesIO(), "a")  # to keep from `BadZipFile`
