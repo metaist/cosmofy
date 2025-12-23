@@ -46,16 +46,12 @@ class Args(GlobalArgs):
 
 def run(args: Args) -> int:
     args.setup_logger()
-    try:
-        if args.version:
-            print_version()
-            return 0
+    if args.version:
+        print_version()
+        return 0
 
-        # NOTE: only called when there was no subcommand found
-        cmd.show_usage()
-    except Exception as e:
-        args.show_error(log, e)
-        return 2
+    # NOTE: only called when there was no subcommand found
+    cmd.show_usage()
     return 0
 
 
@@ -72,5 +68,5 @@ cmd = Command(
     },
 )
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(cmd.main())

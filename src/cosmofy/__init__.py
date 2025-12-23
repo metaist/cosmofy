@@ -6,7 +6,7 @@ from importlib.metadata import version
 
 try:
     __version__ = version("cosmofy")
-except PackageNotFoundError:
+except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0"
 
 __pubdate__ = "unpublished"
