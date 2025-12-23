@@ -1,7 +1,5 @@
 # std
 from pathlib import Path
-from unittest.mock import MagicMock
-from unittest.mock import patch
 import logging
 
 # lib

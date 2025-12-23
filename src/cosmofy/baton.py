@@ -18,6 +18,7 @@ from typing import get_args
 from typing import get_origin
 from typing import get_type_hints
 from typing import Literal
+from typing import TextIO
 from typing import Union
 import logging
 import re
@@ -438,6 +439,9 @@ DEFAULT_THEME = {
 class ColorFormatter(logging.Formatter):
     """Log formatter that renders [tag]...[/] markup to ANSI colors."""
 
+    color: COLOR_MODE
+    _stream: TextIO | None
+
     def __init__(
         self,
         fmt: str | None = None,
@@ -471,12 +475,12 @@ class ColorFormatter(logging.Formatter):
             message = decorate(message)
         return render_tags(message, color=self.color, file=stream)
 
-    def set_stream(self, stream) -> None:
+    def set_stream(self, stream: TextIO) -> None:
         """Set the stream for TTY detection (called by handler)."""
         self._stream = stream
 
 
-class ColorHandler(logging.StreamHandler):
+class ColorHandler(logging.StreamHandler):  # type: ignore
     """StreamHandler that automatically configures ColorFormatter's stream.
 
     Usage:
@@ -528,7 +532,7 @@ def render_tags(
     if theme is None:
         theme = DEFAULT_THEME
 
-    def replace_tag(m: re.Match):
+    def replace_tag(m: re.Match[str]) -> str:
         tag = m.group(1).lower()
         if tag == "/":
             tag = "reset"

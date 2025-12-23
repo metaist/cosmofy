@@ -3,7 +3,6 @@
 # std
 from __future__ import annotations
 from dataclasses import dataclass
-from os import environ as ENV
 from urllib.error import HTTPError
 from zipfile import ZipFile
 import json

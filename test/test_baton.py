@@ -2,6 +2,7 @@
 
 # std
 from dataclasses import dataclass
+from os import environ as ENV
 from pathlib import Path
 from shlex import split
 from typing import Literal
@@ -23,6 +24,11 @@ def test_arg_basic() -> None:
 
     with pytest.raises(ValueError, match="cannot be required"):
         baton.arg("", positional=False, required=True)
+
+
+def test_default_factory() -> None:
+    have = baton.arg(None, default_factory=list)
+    assert have.default_factory is list
 
 
 def test_get_choices() -> None:
@@ -127,7 +133,7 @@ def test_short_flags() -> None:
     assert have.verbose == 1, "combined short flag with value"
     assert have.output == Path("foo"), "combined short flag with value"
 
-    with pytest.raises(ValueError, match="Unknown option"):
+    with pytest.raises(ValueError, match="unknown option"):
         have = baton.parse(Args, split("-?"))
 
 
@@ -144,7 +150,7 @@ def test_long_flags() -> None:
     have = baton.parse(Args, split("--output="))
     assert have.output == Path(""), "long flag with equals empty value"
 
-    with pytest.raises(ValueError, match="Unknown option"):
+    with pytest.raises(ValueError, match="unknown option"):
         have = baton.parse(Args, split("--unknown"))
 
 
@@ -173,10 +179,10 @@ def test_positionals() -> None:
     assert have.a == "a", "multiple positionals in order"
     assert have.b == "b", "multiple positionals in order"
 
-    with pytest.raises(ValueError, match="Missing required"):
+    with pytest.raises(ValueError, match="missing required"):
         baton.parse(Z, split("a"))
 
-    with pytest.raises(ValueError, match="Unexpected argument"):
+    with pytest.raises(ValueError, match="unexpected argument"):
         baton.parse(Z, split("a b c"))
 
 
@@ -208,6 +214,7 @@ def test_actions() -> None:
     class X:
         count: int = arg(0, action="store")
         flag: bool = arg(False, action="store_bool")
+        store_false: bool = arg(True, action="store_false")
         include: list[str] = arg(list, action="append")
         files: list[str] = arg(list, action="extend")
         verbose: int = arg(0, short="-v", action="count")
@@ -219,6 +226,9 @@ def test_actions() -> None:
 
     have = baton.parse(X, split("--nums 1 2 3"))
     assert have.nums == [1, 2, 3], "converted to ints"
+
+    have = baton.parse(X, split("--store-false"))
+    assert have.store_false is False, "explicit set"
 
     have = baton.parse(X, split("--flag true"))
     assert have.flag is True, "explicit value"
@@ -237,11 +247,10 @@ def test_actions() -> None:
 
     have = baton.parse(X, split("--choice a"))
     assert have.choice == "a", "enforces choices"
-    with pytest.raises(ValueError, match="Invalid value"):
+    with pytest.raises(ValueError, match="invalid value"):
         baton.parse(X, split("--choice x"))
 
 
-# TODO subcommands
 def test_subcommands() -> None:
     @dataclass
     class Common:
@@ -287,7 +296,21 @@ def test_subcommands() -> None:
     assert parent.main(split("unknown")) == 1, "unknown subcommand errors"
 
 
-# TODO env
+def test_env() -> None:
+    @dataclass
+    class X:
+        output: str = arg("", env="_OUTPUT")
+        store_true: bool = arg(False, env="_store_true", action="store_true")
+
+    ENV["_OUTPUT"] = "test"
+    have = baton.parse(X, split(""))
+    assert have.output == "test"
+    del ENV["_OUTPUT"]
+
+    ENV["_store_true"] = "1"
+    have = baton.parse(X, split(""))
+    assert have.store_true is True
+    del ENV["_store_true"]
 
 
 def test_edge() -> None:
@@ -308,3 +331,21 @@ def test_edge() -> None:
 
     have = baton.parse(X, split("-- -weird-file"))
     assert have.pos == "-weird-file"
+
+    with pytest.raises(ValueError, match="unknown action"):
+        baton._do_action(
+            object(),
+            baton.Arg(
+                long="--fake",
+                short="-f",
+                field_name="fake",
+                field_type=str,
+                item_type=str,
+                choices=[],
+                action="unknown",  # type: ignore
+                required=False,
+                positional=False,
+                env="",
+            ),
+            "value",
+        )

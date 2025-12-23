@@ -5,7 +5,6 @@
 from __future__ import annotations
 from os import environ as ENV
 from pathlib import Path
-import json
 import logging
 import sys
 import zipfile
