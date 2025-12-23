@@ -12,6 +12,7 @@ import hashlib
 import json
 import logging
 import re
+import shlex
 import subprocess
 
 # pkg
@@ -62,7 +63,10 @@ def get_version(path: Path, default: str = "") -> str:
     version = default
     if path.is_file():
         try:
-            out = subprocess.check_output([path.resolve(), "--version"], text=True)
+            # NOTE: We need to use `shell=True` because the path is a Cosmo APE.
+            # Otherwise we get: `OSError: [Errno 8] Exec format error`
+            cmd = f"{shlex.quote(str(path.resolve()))} --version"
+            out: str = subprocess.check_output(cmd, shell=True, text=True)
             if match := RE_VERSION.search(out):
                 version = match.group()
         except subprocess.CalledProcessError as e:  # we can't get the version

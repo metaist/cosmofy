@@ -204,11 +204,12 @@ class Bundler:
 
     def uv_version(self) -> tuple[str, str]:
         """Return package name and version."""
-        cmd = "uv version --no-build"
-        log.debug(f"{self.banner}run: {cmd}")
+        cmd = ["uv", "version", "--no-build", "--output-format", "json"]
+        log.debug(f"{self.banner}run: {shlex.join(cmd)}")
         if self.args.for_real:
-            out = subprocess.run(cmd, capture_output=True, check=True, shell=True)
-            name, ver = out.stdout.decode("utf-8").strip().split(" ", 2)
+            data = json.loads(subprocess.check_output(cmd, text=True))
+            name = data.get("package_name", "")
+            ver = data.get("version", "")
             return name, ver
         return "", ""
 
@@ -225,7 +226,7 @@ class Bundler:
             "uv",
             "sync",
             "--python",
-            version,
+            shlex.quote(version),
             "--no-editable",
             "--output-format",
             "json",
@@ -246,10 +247,9 @@ class Bundler:
         if self.args.dry_run:
             args.append("--dry-run")
 
-        cmd = shlex.join(args)
-        log.debug(f"{self.banner}run: {cmd}")
+        log.debug(f"{self.banner}run: {shlex.join(args)}")
         if self.args.for_real:
-            out = subprocess.check_output(cmd, shell=True, env=env)
+            out = subprocess.check_output(args, text=True, env=env)
             data = json.loads(out)
             log.debug(data)
 
@@ -364,31 +364,33 @@ class Bundler:
         self.args.output_dir.mkdir(parents=True, exist_ok=True)
         # we have an output dir
 
-        cosmo_temp = tempfile.TemporaryDirectory(prefix="cosmofy-python-")
-        cosmo_python = self.get_cosmo_python(Path(cosmo_temp.name) / "python")
-        version = get_version(cosmo_python)
-        if not version:
-            raise ValueError("could not get Cosmopolitan Python version")
-        # have cosmo python + version
+        with tempfile.TemporaryDirectory(prefix="cosmofy-python-") as cosmo_temp:
+            log.debug(f"temp dir={cosmo_temp}")
+            cosmo_python = self.get_cosmo_python(Path(cosmo_temp) / "python")
+            version = get_version(cosmo_python)
+            if not version:
+                raise ValueError("could not get Cosmopolitan Python version")
+            # have cosmo python + version
 
-        pkg, pkg_ver = self.uv_version()
-        venv_temp = tempfile.TemporaryDirectory(prefix="cosmofy-venv-")
-        venv = Path(venv_temp.name)
-        if self.args.entry or (not self.args.entry and not self.args.script):
-            self.bundle_entry_points(
-                pkg=pkg,
-                version=version,
-                venv=venv,
-                cosmo_python=cosmo_python,
-                output_dir=self.args.output_dir,
-            )
-        # all entry points built
+            pkg, pkg_ver = self.uv_version()
+            with tempfile.TemporaryDirectory(prefix="cosmofy-venv-") as venv_temp:
+                log.debug(f"temp dir={venv_temp}")
+                venv = Path(venv_temp)
+                if self.args.entry or (not self.args.entry and not self.args.script):
+                    self.bundle_entry_points(
+                        pkg=pkg,
+                        version=version,
+                        venv=venv,
+                        cosmo_python=cosmo_python,
+                        output_dir=self.args.output_dir,
+                    )
+                # all entry points built
 
-        for script in self.args.script:
-            self.bundle_script(
-                version, venv, cosmo_python, self.args.output_dir, script
-            )
-        # all scripts built
+                for script in self.args.script:
+                    self.bundle_script(
+                        version, venv, cosmo_python, self.args.output_dir, script
+                    )
+                # all scripts built
 
 
 def run(args: Args) -> int:
