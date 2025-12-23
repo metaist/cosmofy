@@ -3,8 +3,8 @@
 # std
 from __future__ import annotations
 from dataclasses import dataclass
-from shlex import split
 import logging
+import shlex
 import sys
 
 
@@ -47,7 +47,7 @@ def get_args(bundle: ZipFile2) -> str:
     info = bundle.NameToInfo.get(name)
     if info is None:
         return ""
-    return bundle.read(".args").decode("utf-8").replace("\n", " ")
+    return shlex.join(bundle.read(".args").decode("utf-8").split("\n"))
 
 
 def set_args(bundle: ZipFile2, val: str, *, dry_run: bool = False) -> str:
@@ -59,7 +59,7 @@ def set_args(bundle: ZipFile2, val: str, *, dry_run: bool = False) -> str:
     if bundle.NameToInfo.get(".args") is not None:
         remove_path(bundle, ".args", force=True, dry_run=dry_run)
     if for_real:
-        bundle.add_file(".args", "\n".join(split(val)))
+        bundle.add_file(".args", "\n".join(shlex.split(val)))
     log.info(f"{banner}set `.args` to '{val}'")
     return val
 
