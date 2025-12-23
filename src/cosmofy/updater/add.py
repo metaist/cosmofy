@@ -291,6 +291,7 @@ def run(args: Args) -> int:
             log.info(f"infer --release-url: {args.release_url}")
         if not args.receipt_url and not args.release_url:
             err = "at least one of --receipt-url or --release-url is required"
+            err += "\n  note: auto-detection only works for GitHub repositories"
             raise ValueError(err)
         if not args.receipt_url:
             args.receipt_url = args.release_url + ".json"
