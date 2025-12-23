@@ -65,9 +65,9 @@ def get_version(path: Path, default: str = "") -> str:
             out = subprocess.check_output(cmd, shell=True)
             if match := RE_VERSION.search(out):
                 version = match.group().decode("utf-8")
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError as e:  # we can't get the version
             log.exception(e)
-            pass
+            return default
     return version
 
 
