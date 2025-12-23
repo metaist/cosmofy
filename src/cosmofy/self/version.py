@@ -42,7 +42,7 @@ class Args(GlobalArgs):
     output_format: OUTPUT_FORMAT = arg("text")
 
 
-def get_version(pkg="cosmofy") -> dict[str, str]:
+def get_version(pkg: str = "cosmofy") -> dict[str, str]:
     """Return package metadata."""
     return {"package_name": pkg, "version": version(pkg)}
 

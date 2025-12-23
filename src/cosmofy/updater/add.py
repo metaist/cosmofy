@@ -139,7 +139,7 @@ def copy_data(
         add_data(
             dest,
             src.read_bytes(),
-            src.at,
+            src.at,  # type: ignore
             force=True,
             dry_run=dry_run,
             level=level,

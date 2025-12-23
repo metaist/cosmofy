@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from importlib.metadata import distributions
 from os import environ as ENV
 from pathlib import Path
+from typing import Any
 from typing import Literal
 import logging
 import os
@@ -115,7 +116,7 @@ def ensure_uv(cmd: str = "uv") -> bool:
     return True
 
 
-def bash(cmd: str, **kwargs) -> str:
+def bash(cmd: str, **kwargs: Any) -> str:
     result = ""
     for v in ("check", "shell", "capture_output"):
         if v not in kwargs:

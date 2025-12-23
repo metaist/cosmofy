@@ -76,7 +76,7 @@ def remove_path(
         for item in path.iterdir():
             remove_path(
                 bundle,
-                item.at,
+                item.at,  # type: ignore
                 force=force,
                 recursive=recursive,
                 dry_run=dry_run,
