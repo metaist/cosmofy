@@ -9,7 +9,7 @@ Repository = "https://github.com/metaist/cosmofy.git"
 Changelog = "https://github.com/metaist/cosmofy/blob/main/CHANGELOG.md"
 
 [project.scripts]
-cosmofy = "cosmofy.__main__:main"
+cosmofy = "cosmofy.__main__:cmd.main"
 
 [project]
 name = "cosmofy"

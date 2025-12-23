@@ -31,7 +31,7 @@ Invoke-WebRequest -Uri "https://github.com/metaist/cosmofy/releases/latest/downl
 
 ```bash
 # bundle a script with python
-cosmofy myscript.py # produces `myscript.com`
+cosmofy myscript.py # produces `myscript`
 ./myscript.com # runs on macOS / Linux / Windows
 
 # bundle a whole directory; change output path

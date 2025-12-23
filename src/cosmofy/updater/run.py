@@ -47,7 +47,6 @@ Options:
 
 def self_update(path: Path) -> int:
     """Run the self-updater."""
-
     bundle = zipfile.ZipFile(path, "r")
     is_newer, local, remote = check(bundle, receipt_url=RECEIPT_URL, dry_run=False)
     if not is_newer:

@@ -7,15 +7,15 @@ import logging
 import sys
 
 # pkg
-from .add import cmd as add
-from .args import cmd as args
-from .cat import cmd as cat
-from .ls import cmd as ls
-from .rm import cmd as rm
-from ..args import global_options
-from ..args import GlobalArgs
-from ..baton import arg
-from ..baton import Command
+from cosmofy.args import global_options
+from cosmofy.args import GlobalArgs
+from cosmofy.baton import arg
+from cosmofy.baton import Command
+from cosmofy.fs.add import cmd as add
+from cosmofy.fs.args import cmd as args
+from cosmofy.fs.cat import cmd as cat
+from cosmofy.fs.ls import cmd as ls
+from cosmofy.fs.rm import cmd as rm
 
 
 log = logging.getLogger(__name__)
