@@ -1,4 +1,4 @@
-#!/usr/bin env python
+#!/usr/bin/env python
 
 # std
 from __future__ import annotations
