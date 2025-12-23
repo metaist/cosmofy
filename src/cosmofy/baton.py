@@ -459,6 +459,8 @@ class ColorFormatter(logging.Formatter):
                 level = "[bold yellow]warning[/]"
             case "INFO":
                 level = "[bold cyan]info[/]"
+            case "DEBUG":
+                level = "[dim]debug[/]"
             case _:
                 level = record.levelname.lower()
 

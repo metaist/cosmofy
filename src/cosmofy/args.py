@@ -21,8 +21,8 @@ def get_banner(dry_run: bool = False) -> str:
 
 
 log_normal = "%(levelname)s: %(message)s"
-log_debug = "%(name)s.%(funcName)s: %(levelname)s: %(message)s"
-log_verbose = " %(filename)s:%(lineno)s %(funcName)s(): %(levelname)s: %(message)s"
+log_debug = "[dim]%(name)s.%(funcName)s: [/]%(levelname)s: %(message)s"
+log_verbose = "[dim]%(filename)s:%(lineno)s %(funcName)s: [/]%(levelname)s: %(message)s"
 
 handler = ColorHandler()
 handler.setFormatter(ColorFormatter(log_normal))
