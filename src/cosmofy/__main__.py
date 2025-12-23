@@ -9,7 +9,10 @@ import sys
 # pkg
 from .args import global_options
 from .args import GlobalArgs
+from .args import log_normal
 from .baton import arg
+from .baton import ColorFormatter
+from .baton import ColorHandler
 from .baton import Command
 from .bundle import cmd as bundle
 from .fs.__main__ import cmd as fs
@@ -36,6 +39,15 @@ Options:
 
 {global_options}
 """
+
+
+def setup_logger() -> None:
+    """Setup root logger, if needed."""
+    root = logging.getLogger()
+    if not root.handlers:
+        handler = ColorHandler()
+        handler.setFormatter(ColorFormatter(log_normal))
+        logging.basicConfig(level=logging.INFO, handlers=[handler])
 
 
 @dataclass
@@ -70,4 +82,5 @@ cmd = Command(
 )
 
 if __name__ == "__main__":  # pragma: no cover
+    setup_logger()
     sys.exit(cmd.main())

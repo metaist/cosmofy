@@ -11,7 +11,6 @@ import logging
 from .baton import arg
 from .baton import COLOR_MODE
 from .baton import ColorFormatter
-from .baton import ColorHandler
 
 DRY_RUN = "[`DRY RUN`] "
 """Banner to display when using `--dry-run`."""
@@ -26,9 +25,6 @@ log_normal = "%(levelname)s: %(message)s"
 log_debug = "[dim]%(name)s.%(funcName)s: [/]%(levelname)s: %(message)s"
 log_verbose = "[dim]%(filename)s:%(lineno)s %(funcName)s: [/]%(levelname)s: %(message)s"
 
-handler = ColorHandler()
-handler.setFormatter(ColorFormatter(log_normal))
-logging.basicConfig(level=logging.INFO, handlers=[handler])
 log = logging.getLogger(__name__)
 
 global_options = """\
