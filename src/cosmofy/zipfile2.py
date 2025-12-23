@@ -16,7 +16,11 @@ now = datetime.now()
 
 
 class ZipFile2(ZipFile):
-    """Extension of `zipfile.ZipFile` that allows removing members."""
+    """Extension of `zipfile.ZipFile` that allows removing members.
+
+    Note: This class is not safe for concurrent access from multiple
+    processes. Callers should ensure exclusive access to the archive.
+    """
 
     _writing: bool
 
