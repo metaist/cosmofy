@@ -256,8 +256,9 @@ def write_receipt(
     )
     data = str(receipt)
     log.debug(data)
+    if not receipt.is_valid():
+        raise ValueError("embedded receipt must be valid")
 
-    assert receipt.is_valid(), "embedded receipt must be valid"
     add_data(bundle, data, PATH_RECEIPT, force=True, dry_run=dry_run)
 
     receipt.update_from(
@@ -269,8 +270,9 @@ def write_receipt(
     )
     data = str(receipt)
     log.debug(data)
+    if not receipt.is_valid():
+        raise ValueError("published receipt must be valid")
 
-    assert receipt.is_valid(), "published receipt must be valid"
     if for_real:
         output.write_text(data)
     log.info(f"{banner}wrote: {output}")
