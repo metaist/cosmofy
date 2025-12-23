@@ -52,6 +52,7 @@ def remove_path(
     recursive: bool = False,
     # global
     dry_run: bool = False,
+    level: int = logging.INFO,
 ) -> None:
     """Remove `path` from `bundle`."""
     banner = get_banner(dry_run)
@@ -66,7 +67,7 @@ def remove_path(
     if path.is_file():
         if for_real:
             bundle.remove(name)
-        log.info(f"{banner}removed: {name}")
+        log.log(level, f"{banner}removed: {name}")
     elif path.is_dir():
         if not recursive:
             err = f"cannot remove directory {name}"
@@ -83,7 +84,7 @@ def remove_path(
         if name in bundle.NameToInfo:  # dir actually has an entry
             if for_real:
                 bundle.remove(name)
-            log.info(f"{banner}removed: {name}")
+            log.log(level, f"{banner}removed: {name}")
 
 
 def run(args: Args) -> int:
