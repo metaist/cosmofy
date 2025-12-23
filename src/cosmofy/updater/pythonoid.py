@@ -166,9 +166,9 @@ class PythonArgs:
         """.split()
         while argv:
             arg = argv.pop(0)
-            if arg.startswith("--"):
-                pass
-            elif arg.startswith("-") and len(arg) > 2:  # expand
+            if (
+                arg.startswith("-") and not arg.startswith("--") and len(arg) > 2
+            ):  # expand
                 argv = [f"-{a}" for a in arg[1:]] + argv
                 continue
 
