@@ -7,13 +7,14 @@ import logging
 import sys
 
 # pkg
-from ..args import global_options
-from ..args import GlobalArgs
-from ..baton import arg
-from ..baton import Command
+from cosmofy.args import global_options
+from cosmofy.args import GlobalArgs
+from cosmofy.baton import arg
+from cosmofy.baton import Command
+
 from .add import cmd as add
 from .check import cmd as check
-# from .remove import cmd as remove
+from .remove import cmd as remove
 
 
 log = logging.getLogger(__name__)
@@ -50,8 +51,8 @@ cmd = Command(
     run,
     subcommands={
         "add": add,
-        # "remove": remove,
-        # "rm": remove,
+        "remove": remove,
+        "rm": remove,
         "check": check,
     },
 )

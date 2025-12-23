@@ -44,6 +44,9 @@ RELEASE_URL = ENV.get("RELEASE_URL", "")
 COSMOFY_NO_COPY = ENV.get("COSMOFY_NO_COPY", "")
 """Skip copying `cosmofy` to bundle."""
 
+COSMOFY_NO_ARGS = ENV.get("COSMOFY_NO_ARGS", "")
+"""Skip setting `.args` in bundle."""
+
 ARGS_PREFIX = "-m cosmofy.updater.run"
 """Prefix for updater `.args`"""
 
@@ -61,7 +64,7 @@ Usage: cosmofy updater add <BUNDLE> [OPTIONS]
 Arguments:
 {common_args}
 
-Self-updater options:
+Receipt options:
       --receipt <PATH>      output path to the JSON receipt
                             default is <BUNDLE> + `.json`
       --receipt-url <URL>   URL to the published receipt
@@ -73,9 +76,13 @@ Self-updater options:
       --release-version <STRING>
                             release version
                             default is $(<BUNDLE> --version)
+
+Process options:
       --no-copy             skip copying `cosmofy` code
                             (e.g., its already a dependency)
                             [env: COSMOFY_NO_COPY={COSMOFY_NO_COPY}]
+      --no-args             skip setting `.args`
+                            [env: COSMOFY_NO_ARGS={COSMOFY_NO_ARGS}]
 
 read more: https://github.com/metaist/cosmofy#self-updater
 
@@ -91,6 +98,7 @@ class Args(CommonArgs):
     release_url: str = arg(RELEASE_URL)
     release_version: str = arg("")
     no_copy: bool = arg(False, env="COSMOFY_NO_COPY")
+    no_args: bool = arg(False, env="COSMOFY_NO_ARGS")
 
 
 def get_github_download(name: str) -> str:
@@ -212,7 +220,7 @@ def copy_cosmofy(bundle: ZipFile2, *, dry_run: bool = False) -> None:
         from_venv(bundle, src_path, meta_path, dry_run=dry_run)
 
 
-def update_args(python_args: str) -> str:
+def add_arg_prefix(python_args: str) -> str:
     """Return updated args."""
     args = python_args.strip()
     try:
@@ -250,7 +258,6 @@ def write_receipt(
 
     assert receipt.is_valid(), "embedded receipt must be valid"
     add_data(bundle, data, PATH_RECEIPT, force=True, dry_run=dry_run)
-    set_args(bundle, update_args(get_args(bundle)), dry_run=dry_run)
 
     receipt.update_from(
         Receipt.from_path(path, version=release_version),
@@ -270,6 +277,7 @@ def write_receipt(
 
 
 def run(args: Args) -> int:
+    """Entry point for `cosmofy updater add`."""
     args.setup_logger()
     try:
         assert args.ensure_bundle() and args.bundle
@@ -304,6 +312,9 @@ def run(args: Args) -> int:
         bundle = ZipFile2(args.bundle, mode="a")
         if not args.no_copy:
             copy_cosmofy(bundle, dry_run=args.dry_run)
+
+        if not args.no_args:
+            set_args(bundle, add_arg_prefix(get_args(bundle)), dry_run=args.dry_run)
 
         write_receipt(
             args.bundle,
