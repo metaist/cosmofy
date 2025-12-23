@@ -1,61 +1,76 @@
-"""Main entry point."""
+#!/usr/bin/env python
+"""cosmofy: Cosmopolitan Python bundler"""
 
-# std
 from __future__ import annotations
+from dataclasses import dataclass
 import logging
 import sys
 
 # pkg
-from . import __pubdate__
-from . import __version__
-from .args import Args
-from .args import USAGE
-from .bundler import Bundler
+from .args import global_options
+from .args import GlobalArgs
+from .baton import arg
+from .baton import Command
+from .bundle import cmd as bundle
+from .fs.__main__ import cmd as fs
+from .self.__main__ import cmd as self
+from .self.version import print_version
+from .updater.__main__ import cmd as updater
 
-log_normal = "%(levelname)s: %(message)s"
-log_debug = "%(name)s.%(funcName)s: %(levelname)s: %(message)s"
-log_verbose = " %(filename)s:%(lineno)s %(funcName)s(): %(levelname)s: %(message)s"
-logging.basicConfig(level=logging.INFO, format=log_normal)
 
 log = logging.getLogger(__name__)
 
+usage = f"""\
+A Cosmopolitan Python bundler.
 
-def main(argv: list[str] | None = None) -> int:
-    """Main entry point."""
-    short_usage = "\n" + USAGE[USAGE.find("USAGE") + 5 : USAGE.find("GENERAL")].strip()
+Usage: cosmofy [OPTIONS] <COMMAND>
 
+Commands:
+  bundle                    build and bundle a project
+  updater                   install/uninstall bundle self-updater
+  fs                        inspect and modify an existing bundle
+  self                      manage the `cosmofy` executable
+
+Options:
+      --version             display the program version and exit
+
+{global_options}
+"""
+
+
+@dataclass
+class Args(GlobalArgs):
+    command: str = arg("", positional=True)  # optional so we can show usage
+    version: bool = arg(False)
+
+
+def run(args: Args) -> int:
+    args.setup_logger()
     try:
-        args = Args.parse((argv or sys.argv)[1:])
-    except ValueError as e:
-        log.error(e)
-        print(short_usage)
-        return 1
+        if args.version:
+            print_version()
+            return 0
 
-    level = args.verbose - args.quiet
-    if level < 0:
-        logging.disable(logging.CRITICAL)
-    elif level > 0:
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.DEBUG)
-        fmt = log_debug
-        if level > 1:
-            fmt = log_verbose
-        formatter = logging.Formatter(fmt)
-        for handler in root_logger.handlers:
-            handler.setFormatter(formatter)
-        log.debug(args)
-
-    if args.version:
-        print(f"{__version__} ({__pubdate__})", flush=True)
-        return 0
-
-    if args.help:
-        print(USAGE)
-        return 0
-
-    Bundler(args).run()
+        # NOTE: only called when there was no subcommand found
+        cmd.show_usage()
+    except Exception as e:
+        args.show_error(log, e)
+        return 2
     return 0
 
 
-if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main())
+cmd = Command(
+    "cosmofy.fs",
+    Args,
+    run,
+    usage,
+    {
+        "bundle": bundle,
+        "updater": updater,
+        "fs": fs,
+        "self": self,
+    },
+)
+
+if __name__ == "__main__":
+    sys.exit(cmd.main())
