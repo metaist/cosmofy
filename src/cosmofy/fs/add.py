@@ -51,6 +51,28 @@ class Args(CommonArgs):
     # compile_bytecode: bool = arg(False)
 
 
+def sanitize_zip_path(dest: str) -> str:
+    """Normalize and validate a zip archive path.
+
+    - Converts backslashes to forward slashes
+    - Removes leading slashes (no absolute paths)
+    - Rejects path traversal attempts (..)
+
+    Raises:
+        ValueError: If path contains '..' segments
+    """
+    # Normalize separators
+    dest = dest.replace("\\", "/")
+
+    # Split and filter
+    parts = [p for p in dest.split("/") if p and p != "."]
+
+    # Reject traversal
+    if any(p == ".." for p in parts):
+        raise ValueError(f"refusing path with '..': {dest}")
+    return "/".join(parts)
+
+
 def add_data(
     bundle: ZipFile2,
     data: str | bytes | bytearray,
@@ -62,6 +84,7 @@ def add_data(
     level: int = logging.INFO,
 ) -> None:
     """Add `data` to `bundle` at location `dest`."""
+    dest = sanitize_zip_path(dest)
     banner = get_banner(dry_run)
     for_real = not dry_run
 
@@ -96,6 +119,7 @@ def add_path(
     level: int = logging.INFO,
 ) -> None:
     """Add `src` to `bundle` at location `dest`."""
+    dest = sanitize_zip_path(dest)
     banner = get_banner(dry_run)
     if not src.exists():
         raise FileNotFoundError(f"{banner}cannot find file: {src.resolve()}")
