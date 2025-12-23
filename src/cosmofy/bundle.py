@@ -391,8 +391,6 @@ class Bundler:
             )
         # all entry points built
 
-        if self.args.script:
-            log.warning("--script support is experimental")
         for script in self.args.script:
             self.bundle_script(
                 version, venv, cosmo_python, self.args.output_dir, script
