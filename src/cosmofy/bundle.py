@@ -50,12 +50,6 @@ DEFAULT_CACHE_DIR = Path.home() / ".cache" / "cosmofy"
 COSMOFY_CACHE_DIR = ENV.get("COSMOFY_CACHE_DIR", "")
 """Path to cache directory."""
 
-RECEIPT_URL = ENV.get("RECEIPT_URL", "")
-"""Default receipt URL."""
-
-RELEASE_URL = ENV.get("RELEASE_URL", "")
-"""Default release URL."""
-
 
 usage = f"""\
 Build a Python project into a Cosmopolitan bundle.
@@ -99,12 +93,6 @@ class Args(GlobalArgs):
 
     # output
     output_dir: Path | None = arg(None)
-
-    # # self-updater
-    # receipt: Path | None = arg(None)
-    # receipt_url: str = arg("", env="RECEIPT_URL")
-    # release_url: str = arg("", env="RELEASE_URL")
-    # release_version: str = arg("")
 
     # cache
     no_cache: bool = arg(False, short="-n", env="COSMOFY_NO_CACHE")
@@ -161,6 +149,7 @@ def venv_site_packages(venv: Path) -> Path:
 
 
 def console_scripts_from_venv(venv: Path) -> dict[str, str]:
+    # TODO fix this to only get the console_scripts for the current package.
     sp = venv_site_packages(venv)
     out: dict[str, str] = {}
     for dist in distributions(path=[str(sp)]):
@@ -197,6 +186,8 @@ class Bundler:
             move_executable(src, dest)
         return dest
 
+    # cosmopolitan python
+
     def from_cache(self, src: Path, dest: Path) -> Path:
         """Copy the archive from cache."""
         log.debug(f"{self.banner}download (if newer): {self.args.python_url}")
@@ -216,8 +207,22 @@ class Bundler:
             return self.from_download(dest)
         return self.from_cache(self.args.cache_dir / "python", dest)
 
+    # uv
+
+    def uv_version(self) -> tuple[str, str]:
+        """Return package name and version."""
+        cmd = "uv version --no-build"
+        log.debug(f"{self.banner}run: {cmd}")
+        if self.args.for_real:
+            out = subprocess.run(cmd, capture_output=True, check=True, shell=True)
+            name, ver = out.stdout.decode("utf-8").strip().split(" ", 2)
+            return name, ver
+        return "", ""
+
     def uv_sync(
         self,
+        *,
+        pkg: str,
         version: str,
         venv: Path,
         script: Path | None = None,
@@ -231,7 +236,7 @@ class Bundler:
         if script:
             args.extend(["--script", str(script)])
         else:
-            args.append("--no-default-groups")
+            args.extend(["--no-default-groups", "--reinstall-package", pkg])
 
         if self.args.verbosity > 0:
             args.append(f"-{'v' * self.args.verbosity}")
@@ -246,6 +251,7 @@ class Bundler:
             out = subprocess.run(
                 cmd, capture_output=True, check=True, shell=True, env=env
             )
+            log.debug(out.stderr.decode("utf-8"))
 
             # NOTE: `uv sync --script` doesn't respect environment variables.
             # TODO: Fix this brittle check.
@@ -257,9 +263,11 @@ class Bundler:
         log.info(f"{self.banner}uv sync")
         return venv
 
+    # bundle
+
     def bundle_venv(self, bundle: ZipFile2, venv: Path) -> ZipFile2:
         """Bundle a `venv` into `bundle`."""
-        pkgs = venv_site_packages(venv)
+        pkgs = venv_site_packages(venv).parent
         for dirname, _, files in os.walk(pkgs):
             for f in files:
                 src = Path(dirname) / f
@@ -288,6 +296,7 @@ class Bundler:
 
     def bundle_entry_points(
         self,
+        pkg: str,
         version: str,
         venv: Path,
         cosmo_python: Path,
@@ -296,7 +305,7 @@ class Bundler:
         """Return mapping of entry point names to their bundle paths."""
         result: dict[str, Path] = {}
 
-        venv = self.uv_sync(version, venv)
+        venv = self.uv_sync(pkg=pkg, version=version, venv=venv)
         # have all deps built
 
         entry_points = console_scripts_from_venv(venv)
@@ -341,7 +350,7 @@ class Bundler:
         dest = self.fs_copy(cosmo_python, output_dir / script.stem)
         bundle = self.bundle_venv(
             open_zip(dest, mode="a"),
-            self.uv_sync(version, venv, script),
+            self.uv_sync(pkg=script.name, version=version, venv=venv, script=script),
         )
         add_path(bundle, script, script.name, dry_run=self.args.dry_run)
         set_args(bundle, script.name, dry_run=self.args.dry_run)
@@ -362,9 +371,17 @@ class Bundler:
             raise ValueError("could not get Cosmopolitan Python version")
         # have cosmo python + version
 
-        venv = Path(tempfile.TemporaryDirectory(prefix="cosmofy-venv-").name)
+        pkg, pkg_ver = self.uv_version()
+        venv_temp = tempfile.TemporaryDirectory(prefix="cosmofy-venv-")
+        venv = Path(venv_temp.name)
         if self.args.entry or (not self.args.entry and not self.args.script):
-            self.bundle_entry_points(version, venv, cosmo_python, self.args.output_dir)
+            self.bundle_entry_points(
+                pkg=pkg,
+                version=version,
+                venv=venv,
+                cosmo_python=cosmo_python,
+                output_dir=self.args.output_dir,
+            )
         # all entry points built
 
         for script in self.args.script:
@@ -372,9 +389,6 @@ class Bundler:
                 version, venv, cosmo_python, self.args.output_dir, script
             )
         # all scripts built
-
-
-# install updater
 
 
 def run(args: Args) -> int:
