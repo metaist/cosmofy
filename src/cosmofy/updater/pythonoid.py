@@ -3,7 +3,7 @@
 
 # std
 from __future__ import annotations
-from importlib._bootstrap_external import SourceFileLoader  # type: ignore
+from importlib.machinery import SourceFileLoader
 from importlib.util import MAGIC_NUMBER
 from os import environ as ENV
 from pathlib import Path
