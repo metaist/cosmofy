@@ -50,6 +50,40 @@ class Args(CommonArgs):
     # compile_bytecode: bool = arg(False)
 
 
+def add_data(
+    bundle: ZipFile2,
+    data: str | bytes | bytearray,
+    dest: str,
+    *,
+    force: bool = False,
+    # global
+    dry_run: bool = False,
+    level: int = logging.INFO,
+) -> None:
+    """Add `data` to `bundle` at location `dest`."""
+    banner = get_banner(dry_run)
+    for_real = not dry_run
+
+    if bundle.NameToInfo.get(dest) is not None:  # already exists
+        if force:
+            remove_path(
+                bundle,
+                dest,
+                force=force,
+                recursive=False,
+                dry_run=dry_run,
+                level=level,
+            )
+        else:
+            err = f"{banner}file already exists: {dest}"
+            err += "\n  tip: use --force to overwrite it"
+            raise FileExistsError(err)
+
+    if for_real:
+        bundle.add_file(dest, data)
+    log.log(level, f"{banner}added {dest}")
+
+
 def add_path(
     bundle: ZipFile2,
     src: Path,
@@ -58,29 +92,27 @@ def add_path(
     force: bool = False,
     # global
     dry_run: bool = False,
+    level: int = logging.INFO,
 ) -> None:
     """Add `src` to `bundle` at location `dest`."""
     banner = get_banner(dry_run)
-    for_real = not dry_run
-
     if not src.exists():
         raise FileNotFoundError(f"{banner}cannot find file: {src.resolve()}")
 
     if src.is_file():
-        if bundle.NameToInfo.get(dest) is not None:  # already exists
-            if force:
-                remove_path(bundle, dest, force=force, recursive=False, dry_run=dry_run)
-            else:
-                err = f"{banner}file already exists: {dest}"
-                err += "\n  tip: use --force to overwrite it"
-                raise FileExistsError(err)
-
-        if for_real:
-            bundle.add_file(dest, src.read_bytes())
-        log.info(f"{banner}added {dest}")
+        add_data(
+            bundle, src.read_bytes(), dest, force=force, dry_run=dry_run, level=level
+        )
     elif src.is_dir():
         for item in src.iterdir():
-            add_path(bundle, item, dest + f"/{item.name}")
+            add_path(
+                bundle,
+                item,
+                dest + f"/{item.name}",
+                force=force,
+                dry_run=dry_run,
+                level=level,
+            )
 
 
 def add_files(bundle: ZipFile2, args: Args) -> None:
