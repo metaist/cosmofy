@@ -56,7 +56,7 @@ def run(args: Args) -> int:
 
 
 cmd = Command(
-    "cosmofy.fs",
+    "cosmofy",
     Args,
     run,
     usage,

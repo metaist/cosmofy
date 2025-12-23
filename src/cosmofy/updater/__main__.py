@@ -46,7 +46,7 @@ def run(_: Args) -> int:
 
 
 cmd = Command(
-    "cosmofy.self",
+    "cosmofy.updater",
     Args,
     run,
     subcommands={
