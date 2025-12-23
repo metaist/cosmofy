@@ -18,7 +18,6 @@ import tempfile
 
 # pkg
 from .receipt import DEFAULT_HASH
-from .receipt import Receipt
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +31,8 @@ def move_executable(src: Path, dest: Path) -> Path:
     src.chmod(mode)
 
     dest.parent.mkdir(parents=True, exist_ok=True)
-    # TODO 2024-10-31 @ py3.8 EOL: use `Path` instead of `str`
-    shutil.move(str(src), str(dest))
+    shutil.move(src, dest)
+    log.debug(f"move: {src} to {dest}")
     return dest
 
 
@@ -52,7 +51,7 @@ def progress(response: HTTPResponse, prefix: str = "Downloading: ") -> Iterator[
 
 def download(url: str, path: Path) -> Path:
     """Download `url` to path."""
-    log.info(f"Download {url} to {path}")
+    log.info(f"download: {url} to {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     with urlopen(url) as response, path.open("wb") as output:
         for chunk in progress(response):
@@ -74,7 +73,7 @@ def download_if_newer(url: str, path: Path) -> Path:
 
 def download_and_hash(url: str, path: Path, algo: str = DEFAULT_HASH) -> str:
     """Download `url` to `path` and return the hash."""
-    log.info(f"Download {url} to {path}")
+    log.info(f"download: {url} to {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     digest = hashlib.new(algo)
     with urlopen(url) as response, path.open("wb") as output:
@@ -84,22 +83,11 @@ def download_and_hash(url: str, path: Path, algo: str = DEFAULT_HASH) -> str:
     return digest.hexdigest()
 
 
-def download_receipt(url: str) -> Receipt | None:
-    """Try to download a receipt."""
-    log.info(f"Download: {url}")
-    receipt = None
-    try:
-        receipt = Receipt.from_url(url)
-    except HTTPError as e:
-        log.error(f"{e}: {url}")
-    return receipt
-
-
 def download_release(
     url: str, path: Path, expected: str, algo: str = DEFAULT_HASH
 ) -> Path | None:
     """Download release from `url` checking the hash along the way."""
-    log.info(f"Download {url} to {path}")
+    log.info(f"download {url} to {path}")
     with tempfile.NamedTemporaryFile(delete=False) as out:
         temp = Path(out.name)
         try:
@@ -109,9 +97,9 @@ def download_release(
             return None
 
         if received != expected:
-            log.error(f"Hash mismatch: expected={expected}, received={received}")
+            log.error(f"hash mismatch: expected={expected}, received={received}")
             temp.unlink(missing_ok=True)
             return None
 
-    log.debug(f"Overwriting: {path}")
+    log.debug(f"overwriting: {path}")
     return move_executable(temp, path)

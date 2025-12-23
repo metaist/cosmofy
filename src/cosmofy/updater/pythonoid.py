@@ -44,6 +44,34 @@ RE_MAIN = re.compile(
 )
 """Regex for detecting a main section in `bytes`."""
 
+PYTHON_CALL = "-c 'import sys; import {pkg} as _1; sys.exit(_1.{fn})'"
+"""Format for a python call."""
+
+
+# https://github.com/metaist/ds/blob/main/src/ds/parsers/pyproject_rye.py#L153C1-L174C46
+def python_call(call: str) -> str:
+    """Return python arguments a formatted `call` string.
+
+    See: https://rye.astral.sh/guide/pyproject/#call
+
+    >>> python_call("http.server")
+    '-m http.server'
+
+    >>> python_call("builtins:help") == PYTHON_CALL.format(pkg="builtins", fn="help()")
+    True
+
+    >>> python_call("builtins:print('Hello World!')") == PYTHON_CALL.format(
+    ...     pkg="builtins", fn="print('Hello World!')")
+    True
+    """
+    if ":" not in call:
+        return f"-m {call}"
+
+    pkg, fn = call.split(":", 1)
+    if not fn.endswith(")"):
+        fn = f"{fn}()"
+    return PYTHON_CALL.format(pkg=pkg, fn=fn)
+
 
 # https://github.com/python/cpython/blob/3.12/Lib/importlib/_bootstrap_external.py#L79C1-L81C55
 def _pack_uint32(x: int | float) -> bytes:

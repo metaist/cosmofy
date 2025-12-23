@@ -10,8 +10,11 @@ from urllib.request import urlopen
 import dataclasses
 import hashlib
 import json
+import logging
 import re
 import subprocess
+
+log = logging.getLogger(__name__)
 
 Checker = Callable[[str], bool]
 """Function that takes a `str` and returns a `bool` if it is ok."""
@@ -56,14 +59,15 @@ def get_version(path: Path, default: str = "") -> str:
     '0.0.0'
     """
     version = default
-    if path.exists():
+    if path.is_file():
         try:
             cmd = f"{path.resolve()} --version"
-            out = subprocess.run(cmd, capture_output=True, check=True, shell=True)
-            if match := RE_VERSION.search(out.stdout):
+            out = subprocess.check_output(cmd, shell=True)
+            if match := RE_VERSION.search(out):
                 version = match.group().decode("utf-8")
-        except subprocess.CalledProcessError:
-            ...
+        except subprocess.CalledProcessError as e:
+            log.exception(e)
+            pass
     return version
 
 
