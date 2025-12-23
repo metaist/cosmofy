@@ -4,6 +4,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
+from zipfile import is_zipfile
 import logging
 
 # pkg
@@ -104,7 +105,11 @@ class CommonArgs(GlobalArgs):
         if self.bundle:
             self.bundle = self.bundle.resolve()
 
-        if self.for_real and (self.bundle is None or not self.bundle.exists()):
+        if self.for_real and (
+            self.bundle is None
+            or not self.bundle.exists()
+            or not is_zipfile(self.bundle)
+        ):
             raise FileNotFoundError(f"could not find Cosmopolitan file: {self.bundle}")
 
         return True
