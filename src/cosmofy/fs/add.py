@@ -123,10 +123,15 @@ def add_files(bundle: ZipFile2, args: Args) -> None:
         log.debug(f"change directory: {args.chdir}")
         os.chdir(args.chdir)
 
-    root = Path.cwd()
-    prefix = str(root)
+    root = Path.cwd().resolve()
     for name in args.file:
-        dest = args.dest + name.removeprefix(prefix)
+        path = Path(name)
+        try:
+            rel = path.resolve().relative_to(root)
+            dest = str(Path(args.dest) / rel) if args.dest else str(rel)
+        except ValueError:
+            # Path is not under root, use as-is
+            dest = args.dest + name if args.dest else name
         add_path(bundle, Path(name), dest, force=args.force, dry_run=args.dry_run)
 
     if args.chdir:
