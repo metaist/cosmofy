@@ -65,14 +65,24 @@ def download(url: str, path: Path, timeout: int = COSMOFY_TIMEOUT) -> Path:
 
 def download_if_newer(url: str, path: Path, timeout: int = COSMOFY_TIMEOUT) -> Path:
     """Download `url` to `path` if `url` is newer."""
-    exists = path.exists()
-    need_download = not exists  # guess: exists => already downloaded
-    if exists:
+    if not path.exists():
+        return download(url, path)
+
+    response = urlopen(Request(url, method="HEAD"), timeout=timeout)
+    last_modified = response.headers.get("Last-Modified")
+    if not last_modified:
+        log.debug("no `Last-Modified` header; re-downloading")
+        return download(url, path)
+
+    try:
         local = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
-        response = urlopen(Request(url, method="HEAD"), timeout=timeout)
-        remote = parsedate_to_datetime(response.headers.get("Last-Modified"))
-        need_download = remote > local  # only download if newer
-    return download(url, path) if need_download else path
+        remote = parsedate_to_datetime(last_modified)
+        if remote > local:
+            return download(url, path)
+        return path  # cached version is current
+    except (TypeError, ValueError):
+        log.debug(f"could not parse `Last-Modified`: {last_modified}; re-downloading")
+        return download(url, path)
 
 
 def download_and_hash(
