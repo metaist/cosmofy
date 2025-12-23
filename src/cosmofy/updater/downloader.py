@@ -14,6 +14,7 @@ import hashlib
 import logging
 import shutil
 import stat
+import sys
 import tempfile
 
 # pkg
@@ -44,7 +45,7 @@ def progress(response: HTTPResponse, prefix: str = "Downloading: ") -> Iterator[
     while chunk := response.read(CHUNK_SIZE):
         done += len(chunk)
         percent = done / total * 100
-        print(f"\r{prefix}{percent:.2f}%", end="", flush=True)
+        print(f"\r{prefix}{percent:.2f}%", end="", flush=True, file=sys.stderr)
         yield chunk
     print("")
 
