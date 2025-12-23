@@ -39,7 +39,7 @@ RECEIPT_HASH = re.compile(r"^[a-f0-9]+$")
 DEFAULT_HASH = "sha256"
 """Default hashing algorithm."""
 
-RE_VERSION = re.compile(rb"\d+\.\d+\.\d+(-[\da-zA-Z-.]+)?(\+[\da-zA-Z-.]+)?")
+RE_VERSION = re.compile(r"\d+\.\d+\.\d+(-[\da-zA-Z-.]+)?(\+[\da-zA-Z-.]+)?")
 """Regex for a semver-like version string."""
 
 
@@ -61,10 +61,9 @@ def get_version(path: Path, default: str = "") -> str:
     version = default
     if path.is_file():
         try:
-            cmd = f"{path.resolve()} --version"
-            out = subprocess.check_output(cmd, shell=True)
+            out = subprocess.check_output([path.resolve(), "--version"], text=True)
             if match := RE_VERSION.search(out):
-                version = match.group().decode("utf-8")
+                version = match.group()
         except subprocess.CalledProcessError as e:  # we can't get the version
             log.exception(e)
             return default
