@@ -10,9 +10,7 @@ from zipfile import ZipFile
 from zipfile import ZipInfo
 import logging
 
-
 log = logging.getLogger(__name__)
-now = datetime.now()
 
 
 class ZipFile2(ZipFile):
@@ -44,9 +42,12 @@ class ZipFile2(ZipFile):
         path: str,
         data: bytearray | bytes | str,
         mode: int = 0o644,
-        date: datetime = now,
+        date: datetime | None = None,
     ) -> ZipFile2:
         """Add a file to an archive with appropriate permissions."""
+        if date is None:
+            date = datetime.now()
+
         info = ZipInfo(path, date.timetuple()[:6])
         info.compress_type = ZIP_DEFLATED
         info.external_attr = (0x8000 | (mode & 0xFFFF)) << 16
