@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 usage = f"""\
 Print contents of a file within a Cosmopolitan bundle.
 
-Usage: cosmofy fs cat <BUNDLE> [OPTIONS] <FILE>...
+Usage: cosmofy fs cat <BUNDLE> <FILE>... [OPTIONS]
 
 Arguments:
 {common_args}
