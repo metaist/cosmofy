@@ -8,6 +8,7 @@ from os import environ as ENV
 from pathlib import Path
 from typing import Any
 from typing import Literal
+import json
 import logging
 import os
 import re
@@ -229,7 +230,15 @@ class Bundler:
         script: Path | None = None,
     ) -> Path:
         """Return the venv used during `uv sync`."""
-        args: list[str] = ["uv", "sync", "--python", version, "--no-editable"]
+        args: list[str] = [
+            "uv",
+            "sync",
+            "--python",
+            version,
+            "--no-editable",
+            "--output-format",
+            "json",
+        ]
         env: dict[str, str] = {**ENV}
         env["VIRTUAL_ENV"] = str(venv)
         env["UV_PROJECT_ENVIRONMENT"] = str(venv)
@@ -249,17 +258,14 @@ class Bundler:
         cmd = shlex.join(args)
         log.debug(f"{self.banner}run: {cmd}")
         if self.args.for_real:
-            out = subprocess.run(
-                cmd, capture_output=True, check=True, shell=True, env=env
-            )
-            log.debug(out.stderr.decode("utf-8"))
+            out = subprocess.check_output(cmd, shell=True, env=env)
+            data = json.loads(out)
+            log.debug(data)
 
             # NOTE: `uv sync --script` doesn't respect environment variables.
-            # TODO: Fix this brittle check.
-            pattern = r"script environment at: (.*)\n"
-            string = out.stderr.decode("utf-8")
-            if match := re.search(pattern, string):
-                venv = Path(match.group(1))
+            script_venv = data.get("sync", {}).get("environment", {}).get("path", "")
+            if script_venv != str(venv):
+                venv = Path(script_venv)
 
         log.info(f"{self.banner}uv sync")
         return venv
@@ -385,6 +391,8 @@ class Bundler:
             )
         # all entry points built
 
+        if self.args.script:
+            log.warning("--script support is experimental")
         for script in self.args.script:
             self.bundle_script(
                 version, venv, cosmo_python, self.args.output_dir, script
