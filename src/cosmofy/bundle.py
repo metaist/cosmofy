@@ -19,18 +19,18 @@ import tempfile
 import zipfile
 
 # pkg
-from .args import global_options
-from .args import GlobalArgs
-from .baton import arg
-from .baton import Command
-from .fs.add import add_path
-from .fs.args import set_args
-from .updater.downloader import download
-from .updater.downloader import download_if_newer
-from .updater.downloader import move_executable
-from .updater.pythonoid import python_call
-from .updater.receipt import get_version
-from .zipfile2 import ZipFile2
+from cosmofy.args import global_options
+from cosmofy.args import GlobalArgs
+from cosmofy.baton import arg
+from cosmofy.baton import Command
+from cosmofy.fs.add import add_path
+from cosmofy.fs.args import set_args
+from cosmofy.updater.downloader import download
+from cosmofy.updater.downloader import download_if_newer
+from cosmofy.updater.downloader import move_executable
+from cosmofy.updater.pythonoid import python_call
+from cosmofy.updater.receipt import get_version
+from cosmofy.zipfile2 import ZipFile2
 
 
 log = logging.getLogger(__name__)

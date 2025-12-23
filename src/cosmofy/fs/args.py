@@ -9,13 +9,14 @@ import sys
 
 
 # pkg
-from ..args import common_args
-from ..args import CommonArgs
-from ..args import get_banner
-from ..args import global_options
-from ..baton import arg
-from ..baton import Command
-from ..zipfile2 import ZipFile2
+from cosmofy.args import common_args
+from cosmofy.args import CommonArgs
+from cosmofy.args import get_banner
+from cosmofy.args import global_options
+from cosmofy.baton import arg
+from cosmofy.baton import Command
+from cosmofy.zipfile2 import ZipFile2
+
 from .rm import remove_path
 
 
@@ -38,6 +39,7 @@ Arguments:
 
 @dataclass
 class Args(CommonArgs):
+    __doc__ = usage
     val: str = arg("", positional=True, required=False)
 
 
@@ -80,7 +82,7 @@ def run(args: Args) -> int:
     return 0
 
 
-cmd = Command("cosmofy.fs.args", Args, run, usage)
+cmd = Command("cosmofy.fs.args", Args, run)
 
 if __name__ == "__main__":
     sys.exit(cmd.main())

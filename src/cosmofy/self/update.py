@@ -9,10 +9,10 @@ import logging
 import sys
 
 # pkg
-from ..args import global_options
-from ..args import GlobalArgs
-from ..baton import Command
-from ..updater.run import self_update
+from cosmofy.args import global_options
+from cosmofy.args import GlobalArgs
+from cosmofy.baton import Command
+from cosmofy.updater.run import self_update
 
 
 log = logging.getLogger(__name__)

@@ -10,8 +10,9 @@ import sys
 import zipfile
 
 # pkg
-from .. import __pubdate__
-from .. import __version__
+from cosmofy import __pubdate__
+from cosmofy import __version__
+
 from .add import RECEIPT_URL
 from .add import RELEASE_URL
 from .check import check

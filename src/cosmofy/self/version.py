@@ -10,12 +10,12 @@ import logging
 import sys
 
 # pkg
-from ..args import global_options
-from ..args import GlobalArgs
-from ..baton import arg
-from ..baton import COLOR_MODE
-from ..baton import Command
-from ..baton import render_tags
+from cosmofy.args import global_options
+from cosmofy.args import GlobalArgs
+from cosmofy.baton import arg
+from cosmofy.baton import COLOR_MODE
+from cosmofy.baton import Command
+from cosmofy.baton import render_tags
 
 
 log = logging.getLogger(__name__)

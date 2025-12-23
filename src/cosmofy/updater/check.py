@@ -10,12 +10,13 @@ import logging
 import sys
 
 # pkg
-from ..args import common_args
-from ..args import CommonArgs
-from ..args import get_banner
-from ..args import global_options
-from ..baton import arg
-from ..baton import Command
+from cosmofy.args import common_args
+from cosmofy.args import CommonArgs
+from cosmofy.args import get_banner
+from cosmofy.args import global_options
+from cosmofy.baton import arg
+from cosmofy.baton import Command
+
 from .add import PATH_RECEIPT
 from .add import RECEIPT_URL
 from .receipt import Receipt

@@ -20,14 +20,15 @@ import stat
 import sys
 
 # pkg
+from cosmofy.args import common_args
+from cosmofy.args import CommonArgs
+from cosmofy.args import global_options
+from cosmofy.baton import arg
+from cosmofy.baton import Command
+from cosmofy.zipfile2 import ZipFile2
+
 from . import expand_glob
 from . import shell_match
-from ..args import common_args
-from ..args import CommonArgs
-from ..args import global_options
-from ..baton import arg
-from ..baton import Command
-from ..zipfile2 import ZipFile2
 
 log = logging.getLogger(__name__)
 
@@ -62,6 +63,8 @@ Output options:
 
 @dataclass
 class Args(CommonArgs):
+    __doc__ = usage
+
     # positional
     file: list[str] = arg(list, positional=True)
     """Files to show information about."""
@@ -265,7 +268,7 @@ def run(args: Args) -> int:
     return 0
 
 
-cmd = Command("cosmofy.fs.ls", Args, run, usage)
+cmd = Command("cosmofy.fs.ls", Args, run)
 
 if __name__ == "__main__":
     sys.exit(cmd.main())

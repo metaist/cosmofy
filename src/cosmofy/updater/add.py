@@ -17,17 +17,18 @@ import subprocess
 import sys
 
 # pkg
-from ..args import common_args
-from ..args import CommonArgs
-from ..args import get_banner
-from ..args import global_options
-from ..baton import arg
-from ..baton import Command
-from ..fs.add import add_data
-from ..fs.add import add_path
-from ..fs.args import get_args
-from ..fs.args import set_args
-from ..zipfile2 import ZipFile2
+from cosmofy.args import common_args
+from cosmofy.args import CommonArgs
+from cosmofy.args import get_banner
+from cosmofy.args import global_options
+from cosmofy.baton import arg
+from cosmofy.baton import Command
+from cosmofy.fs.add import add_data
+from cosmofy.fs.add import add_path
+from cosmofy.fs.args import get_args
+from cosmofy.fs.args import set_args
+from cosmofy.zipfile2 import ZipFile2
+
 from .pythonoid import PythonArgs
 from .receipt import get_version
 from .receipt import Receipt

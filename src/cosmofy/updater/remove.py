@@ -3,30 +3,23 @@
 # std
 from __future__ import annotations
 from dataclasses import dataclass
-from os import environ as ENV
-from pathlib import Path
-from shutil import which
-from zipfile import is_zipfile
-from zipfile import Path as ZipPath
 import logging
-import re
-import shlex
-import subprocess
 import sys
 
 # pkg
+from cosmofy.args import common_args
+from cosmofy.args import CommonArgs
+from cosmofy.args import global_options
+from cosmofy.baton import arg
+from cosmofy.baton import Command
 from cosmofy.fs import expand_glob
-from ..args import common_args
-from ..args import CommonArgs
-from ..args import global_options
-from ..baton import Command
-from ..baton import arg
-from ..fs.args import get_args
-from ..fs.args import set_args
-from ..zipfile2 import ZipFile2
+from cosmofy.fs.args import get_args
+from cosmofy.fs.args import set_args
+from cosmofy.fs.rm import remove_path
+from cosmofy.zipfile2 import ZipFile2
+
 from .add import COSMOFY_NO_ARGS
 from .add import PATH_COSMOFY
-from cosmofy.fs.rm import remove_path
 
 log = logging.getLogger(__name__)
 
