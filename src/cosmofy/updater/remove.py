@@ -29,7 +29,7 @@ ARGS_PREFIXES: list[str] = [
 ]
 
 usage = f"""\
-Remove cosmofy self-updater from a cosmofy bundle.
+EXPERIMENTAL: Remove cosmofy self-updater from a cosmofy bundle.
 
 Usage: cosmofy updater remove <BUNDLE> [OPTIONS]
 
@@ -61,6 +61,7 @@ def remove_arg_prefix(python_args: str) -> str:
 def run(args: Args) -> int:
     """Entry point for `cosmofy updater remove`."""
     args.setup_logger()
+    log.warning("EXPERIMENTAL: `cosmofy updater` operations are experimental")
     try:
         assert args.ensure_bundle() and args.bundle
 

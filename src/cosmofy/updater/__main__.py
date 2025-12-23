@@ -20,7 +20,7 @@ from .remove import cmd as remove
 log = logging.getLogger(__name__)
 
 usage = f"""\
-Manage a bundle's self-updater.
+EXPERIMENTAL: Manage a bundle's self-updater.
 
 Usage: cosmofy updater [OPTIONS] <COMMAND>
 

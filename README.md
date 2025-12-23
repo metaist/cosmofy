@@ -222,7 +222,7 @@ cog.outl(f"\n```text\n{usage}```\n")
 ]]]-->
 
 ```text
-Manage a bundle's self-updater.
+EXPERIMENTAL: Manage a bundle's self-updater.
 
 Usage: cosmofy updater [OPTIONS] <COMMAND>
 
@@ -252,7 +252,7 @@ cog.outl(f"\n```text\n{usage}```\n")
 ]]]-->
 
 ```text
-Add self-updater to a cosmofy bundle.
+EXPERIMENTAL: Add self-updater to a cosmofy bundle.
 
 Usage: cosmofy updater add <BUNDLE> [OPTIONS]
 
@@ -302,7 +302,7 @@ cog.outl(f"\n```text\n{usage}```\n")
 ]]]-->
 
 ```text
-Remove cosmofy self-updater from a cosmofy bundle.
+EXPERIMENTAL: Remove cosmofy self-updater from a cosmofy bundle.
 
 Usage: cosmofy updater remove <BUNDLE> [OPTIONS]
 
@@ -334,7 +334,7 @@ cog.outl(f"\n```text\n{usage}```\n")
 ]]]-->
 
 ```text
-Check if a cosmofy bundle has an update.
+EXPERIMENTAL: Check if a cosmofy bundle has an update.
 
 Usage: cosmofy updater check <BUNDLE> [OPTIONS]
 
@@ -445,7 +445,7 @@ cog.outl(f"\n```text\n{usage}```\n")
 ```text
 Print contents of a file within a Cosmopolitan bundle.
 
-Usage: cosmofy fs cat <BUNDLE> [OPTIONS] <FILE>...
+Usage: cosmofy fs cat <BUNDLE> <FILE>... [OPTIONS]
 
 Arguments:
   <BUNDLE>                  Cosmopolitan file bundle

@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 
 usage = f"""\
-Check if a cosmofy bundle has an update.
+EXPERIMENTAL: Check if a cosmofy bundle has an update.
 
 Usage: cosmofy updater check <BUNDLE> [OPTIONS]
 
@@ -95,6 +95,7 @@ def check(
 def run(args: Args) -> int:
     """Main entry point for `cosmofy updater check`."""
     args.setup_logger()
+    log.warning("EXPERIMENTAL: `cosmofy updater` operations are experimental")
     try:
         assert args.ensure_bundle() and args.bundle
         check(

@@ -58,7 +58,7 @@ PATH_RECEIPT = f"{PATH_COSMOFY}/.cosmofy.json"
 """Path within the zip file to the local receipt."""
 
 usage = f"""\
-Add self-updater to a cosmofy bundle.
+EXPERIMENTAL: Add self-updater to a cosmofy bundle.
 
 Usage: cosmofy updater add <BUNDLE> [OPTIONS]
 
@@ -282,6 +282,7 @@ def write_receipt(
 def run(args: Args) -> int:
     """Entry point for `cosmofy updater add`."""
     args.setup_logger()
+    log.warning("EXPERIMENTAL: `cosmofy updater` operations are experimental")
     try:
         assert args.ensure_bundle() and args.bundle
         if not args.receipt:
