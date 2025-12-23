@@ -209,10 +209,18 @@ def from_venv(
 def copy_cosmofy(bundle: ZipFile2, *, dry_run: bool = False) -> None:
     """Copy `cosmofy` package into `bundle`."""
     dist = metadata.distribution("cosmofy")
-    assert isinstance(dist, PathDistribution)
-
     src_path = Path(__file__).parent.parent
-    meta_path = Path(str(dist._path))
+    site_packages = src_path.parent
+
+    dist_info_name = f"{dist.name}-{dist.version}.dist-info"
+    meta_path = site_packages / dist_info_name
+
+    if not meta_path.is_dir():
+        if hasattr(dist, "_path") and isinstance(dist, PathDistribution):
+            meta_path = Path(str(dist._path))
+        else:
+            raise FileNotFoundError(f"could not location {dist_info_name}")
+
     if is_zipfile(sys.executable):
         log.debug("inside cosmo python")
         from_cosmo(bundle, src_path, meta_path, dry_run=dry_run)
