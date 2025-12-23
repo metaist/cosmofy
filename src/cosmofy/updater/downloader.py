@@ -17,7 +17,8 @@ import stat
 import tempfile
 
 # pkg
-from .receipt import DEFAULT_HASH
+from . import DEFAULT_HASH
+from . import COSMOFY_TIMEOUT
 
 log = logging.getLogger(__name__)
 
@@ -52,34 +53,36 @@ def progress(response: HTTPResponse, prefix: str = "Downloading: ") -> Iterator[
     print("")
 
 
-def download(url: str, path: Path) -> Path:
+def download(url: str, path: Path, timeout: int = COSMOFY_TIMEOUT) -> Path:
     """Download `url` to path."""
     log.info(f"download: {url} to {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
-    with urlopen(url) as response, path.open("wb") as output:
+    with urlopen(url, timeout=timeout) as response, path.open("wb") as output:
         for chunk in progress(response):
             output.write(chunk)
     return path
 
 
-def download_if_newer(url: str, path: Path) -> Path:
+def download_if_newer(url: str, path: Path, timeout: int = COSMOFY_TIMEOUT) -> Path:
     """Download `url` to `path` if `url` is newer."""
     exists = path.exists()
     need_download = not exists  # guess: exists => already downloaded
     if exists:
         local = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
-        response = urlopen(Request(url, method="HEAD"))
+        response = urlopen(Request(url, method="HEAD"), timeout=timeout)
         remote = parsedate_to_datetime(response.headers.get("Last-Modified"))
         need_download = remote > local  # only download if newer
     return download(url, path) if need_download else path
 
 
-def download_and_hash(url: str, path: Path, algo: str = DEFAULT_HASH) -> str:
+def download_and_hash(
+    url: str, path: Path, algo: str = DEFAULT_HASH, timeout: int = COSMOFY_TIMEOUT
+) -> str:
     """Download `url` to `path` and return the hash."""
     log.info(f"download: {url} to {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     digest = hashlib.new(algo)
-    with urlopen(url) as response, path.open("wb") as output:
+    with urlopen(url, timeout=timeout) as response, path.open("wb") as output:
         for chunk in progress(response):
             digest.update(chunk)
             output.write(chunk)

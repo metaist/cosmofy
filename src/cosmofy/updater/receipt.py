@@ -14,6 +14,10 @@ import logging
 import re
 import subprocess
 
+# pkg
+from . import DEFAULT_HASH
+from . import COSMOFY_TIMEOUT
+
 log = logging.getLogger(__name__)
 
 Checker = Callable[[str], bool]
@@ -35,9 +39,6 @@ RECEIPT_ALGO = re.compile(r"^[a-z0-9-_]+$")
 
 RECEIPT_HASH = re.compile(r"^[a-f0-9]+$")
 """Regex to validate `Receipt.hash`."""
-
-DEFAULT_HASH = "sha256"
-"""Default hashing algorithm."""
 
 RE_VERSION = re.compile(r"\d+\.\d+\.\d+(-[\da-zA-Z-.]+)?(\+[\da-zA-Z-.]+)?")
 """Regex for a semver-like version string."""
@@ -179,9 +180,9 @@ class Receipt:
         return Receipt(schema=schema, **_data)
 
     @staticmethod
-    def from_url(url: str) -> Receipt:
+    def from_url(url: str, timeout: int = COSMOFY_TIMEOUT) -> Receipt:
         """Return a Receipt from a URL."""
-        with urlopen(url) as response:
+        with urlopen(url, timeout=timeout) as response:
             return Receipt.from_dict(json.load(response))
 
     @staticmethod
