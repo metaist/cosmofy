@@ -12,6 +12,7 @@ import logging
 import os
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -26,7 +27,6 @@ from cosmofy.fs.add import add_path
 from cosmofy.fs.args import set_args
 from cosmofy.updater.downloader import download
 from cosmofy.updater.downloader import download_if_newer
-from cosmofy.updater.downloader import move_executable
 from cosmofy.updater.pythonoid import python_call
 from cosmofy.updater.receipt import get_version
 from cosmofy.zipfile2 import ZipFile2
@@ -229,7 +229,7 @@ class Bundler:
         *,
         pkg: str,
         version: str,
-        venv: Path,
+        venv: Path | None,
         script: Path | None = None,
     ) -> Path:
         """Return the venv used during `uv sync`."""
@@ -244,8 +244,9 @@ class Bundler:
             "json",
         ]
         env: dict[str, str] = {**ENV}
-        env["VIRTUAL_ENV"] = str(venv)
-        env["UV_PROJECT_ENVIRONMENT"] = str(venv)
+        if venv:
+            env["VIRTUAL_ENV"] = str(venv)
+            env["UV_PROJECT_ENVIRONMENT"] = str(venv)
 
         if script:
             args.extend(["--script", str(script)])
@@ -266,9 +267,9 @@ class Bundler:
             log.debug(data)
 
             # NOTE: `uv sync --script` doesn't respect environment variables.
-            script_venv = data.get("sync", {}).get("environment", {}).get("path", "")
-            if script_venv != str(venv):
-                venv = Path(script_venv)
+            venv = Path(data.get("sync", {}).get("environment", {}).get("path", ""))
+        else:  # dummy value
+            venv = Path()
 
         log.info(f"{self.banner}uv sync")
         return venv
@@ -351,16 +352,16 @@ class Bundler:
     def bundle_script(
         self,
         version: str,
-        venv: Path,
+        venv: Path | None,
         cosmo_python: Path,
-        output_dir: Path,
+        output_dir: Path | None,
         script: Path,
     ) -> Path:
         """Bundle an individual script."""
         if not script.is_file():
             raise FileNotFoundError(f"cannot find script file: {script}")
 
-        dest = self.fs_copy(cosmo_python, output_dir / script.stem)
+        dest = self.fs_copy(cosmo_python, (output_dir or script.parent) / script.stem)
         with open_zip(dest, mode="a") as bundle:
             self.bundle_venv(
                 bundle,
@@ -376,11 +377,6 @@ class Bundler:
 
     def run(self) -> None:
         """Build a venv and bundle it into a Cosmopolitan Python executable."""
-        if not self.args.output_dir:
-            self.args.output_dir = find_project_root() / "dist"
-        self.args.output_dir.mkdir(parents=True, exist_ok=True)
-        # we have an output dir
-
         with tempfile.TemporaryDirectory(prefix="cosmofy-python-") as cosmo_temp:
             log.debug(f"temp dir={cosmo_temp}")
             cosmo_python = self.get_cosmo_python(Path(cosmo_temp) / "python")
@@ -389,11 +385,16 @@ class Bundler:
                 raise ValueError("could not get Cosmopolitan Python version")
             # have cosmo python + version
 
-            pkg, pkg_ver = self.uv_version()
             with tempfile.TemporaryDirectory(prefix="cosmofy-venv-") as venv_temp:
                 log.debug(f"temp dir={venv_temp}")
                 venv = Path(venv_temp)
                 if self.args.entry or (not self.args.entry and not self.args.script):
+                    if not self.args.output_dir:
+                        self.args.output_dir = find_project_root() / "dist"
+                    self.args.output_dir.mkdir(parents=True, exist_ok=True)
+                    # have an output dir
+
+                    pkg, pkg_ver = self.uv_version()
                     self.bundle_entry_points(
                         pkg=pkg,
                         version=version,
@@ -405,7 +406,11 @@ class Bundler:
 
                 for script in self.args.script:
                     self.bundle_script(
-                        version, venv, cosmo_python, self.args.output_dir, script
+                        version,
+                        venv,
+                        cosmo_python,
+                        self.args.output_dir,
+                        script,
                     )
                 # all scripts built
 
