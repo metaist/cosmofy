@@ -64,6 +64,9 @@ def sanitize_zip_path(dest: str) -> str:
     Raises:
         ValueError: If path contains `..` segments
     """
+    if "\x00" in dest:
+        raise ValueError(f"refusing path with null byte: {dest!r}")
+
     clean = dest.replace("\\", "/")
     if clean.startswith("/"):
         log.warning(f"Stripping leading '/' from absolute path: {dest}")
