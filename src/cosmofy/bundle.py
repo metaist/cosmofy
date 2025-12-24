@@ -181,12 +181,13 @@ class Bundler:
             shutil.copy(src, dest)
         return dest
 
-    def fs_move_executable(self, src: Path, dest: Path) -> Path:
-        """Move a file and set its executable bit."""
-        log.debug(f"{self.banner}move executable: {src} to {dest}")
+    def fs_set_executable(self, src: Path) -> Path:
+        """Set the executable bit on a file."""
+        log.debug(f"{self.banner}chmod +x {src}")
         if self.args.for_real:
-            move_executable(src, dest)
-        return dest
+            mode = src.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+            src.chmod(mode)
+        return src
 
     # cosmopolitan python
 
@@ -195,14 +196,14 @@ class Bundler:
         log.debug(f"{self.banner}download (if newer): {self.args.python_url}")
         if self.args.for_real:
             download_if_newer(self.args.python_url, src)
-        return self.fs_copy(src, dest)
+        return self.fs_set_executable(self.fs_copy(src, dest))
 
     def from_download(self, dest: Path) -> Path:
         """Download archive."""
         log.debug(f"{self.banner}download (fresh): {self.args.python_url} to {dest}")
         if self.args.for_real:
             download(self.args.python_url, dest)
-        return dest
+        return self.fs_set_executable(dest)
 
     def get_cosmo_python(self, dest: Path) -> Path:
         """Return a `Path` a Cosmopolitan Python executable."""
