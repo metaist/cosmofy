@@ -28,7 +28,11 @@ def shell_match(name: str, pat: str) -> bool:
 
 
 def expand_glob(names: list[str], pat: str) -> Iterator[str]:
-    """Return all file names that match the pattern."""
+    """Resolve a file pattern.
+
+    Glob patterns are matched against `names`. Literal paths are passed
+    through unchanged (caller is responsible for checking existence).
+    """
     if "*" in pat or "?" in pat:
         yield from (name for name in names if shell_match(name, pat))
     else:
