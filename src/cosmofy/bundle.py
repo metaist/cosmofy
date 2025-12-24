@@ -228,6 +228,7 @@ class Bundler:
             "--python",
             shlex.quote(version),
             "--no-editable",
+            "--exact",
             "--output-format",
             "json",
         ]
