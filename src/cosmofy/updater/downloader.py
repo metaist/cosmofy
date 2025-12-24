@@ -28,12 +28,13 @@ CHUNK_SIZE = 65536
 """Default chunk size."""
 
 
-def validate_url(url: str, allow_http: bool = False) -> None:
+def validate_url(url: str, allow_http: bool = False) -> bool:
     """Validate URL scheme is https (or http if explicitly allowed)."""
     parsed = urlparse(url)
     allowed = ("https",) if not allow_http else ("https", "http")
     if parsed.scheme not in allowed:
         raise ValueError(f"URL must use HTTPS, got: {parsed.scheme}://")
+    return True
 
 
 def move_executable(src: Path, dest: Path) -> Path:
