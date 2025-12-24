@@ -59,18 +59,16 @@ def sanitize_zip_path(dest: str) -> str:
 
     - Converts backslashes to forward slashes
     - Removes leading slashes (no absolute paths)
-    - Rejects path traversal attempts (..)
+    - Rejects path traversal attempts (`..`)
 
     Raises:
-        ValueError: If path contains '..' segments
+        ValueError: If path contains `..` segments
     """
-    # Normalize separators
-    dest = dest.replace("\\", "/")
+    clean = dest.replace("\\", "/")
+    if clean.startswith("/"):
+        log.warning(f"Stripping leading '/' from absolute path: {dest}")
 
-    # Split and filter
-    parts = [p for p in dest.split("/") if p and p != "."]
-
-    # Reject traversal
+    parts = [p for p in clean.split("/") if p and p != "."]
     if any(p == ".." for p in parts):
         raise ValueError(f"refusing path with '..': {dest}")
     return "/".join(parts)
