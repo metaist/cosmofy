@@ -107,11 +107,11 @@ def download_if_newer(url: str, path: Path, timeout: int = COSMOFY_TIMEOUT) -> P
     if not path.exists():
         return download(url, path)
 
-    response = urlopen(Request(url, method="HEAD"), timeout=timeout)
-    last_modified = response.headers.get("Last-Modified")
-    if not last_modified:
-        log.debug("no `Last-Modified` header; re-downloading")
-        return download(url, path)
+    with urlopen(Request(url, method="HEAD"), timeout=timeout) as response:
+        last_modified = response.headers.get("Last-Modified")
+        if not last_modified:
+            log.debug("no `Last-Modified` header; re-downloading")
+            return download(url, path)
 
     try:
         local = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
