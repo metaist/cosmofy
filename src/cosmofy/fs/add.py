@@ -121,8 +121,16 @@ def add_path(
     # global
     dry_run: bool = False,
     level: int = logging.INFO,
+    _seen: set[str] | None = None,
 ) -> None:
     """Add `src` to `bundle` at location `dest`."""
+    _seen = _seen or set()
+    real = str(src.resolve())
+    if real in _seen:  # already done
+        log.warning(f"skipping circular symlink: {src}")
+        return
+    _seen.add(real)
+
     dest = sanitize_zip_path(dest)
     banner = get_banner(dry_run)
     if not src.exists():
@@ -141,6 +149,7 @@ def add_path(
                 force=force,
                 dry_run=dry_run,
                 level=level,
+                _seen=_seen,
             )
 
 
