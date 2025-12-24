@@ -56,7 +56,7 @@ git merge --no-ff --no-edit main
 Update top-most `__init__.py`:
 
 ```python
-__version__ = "X.0.1"
+__pubdate__ = "20xx-xx-xxT00:00:00Z"
 ```
 
 Update `CHANGELOG.md`. To see recently closed issues run:
