@@ -58,7 +58,7 @@ def test_download_if_not_exists(_download: MagicMock, _exists: MagicMock) -> Non
     _exists.return_value = False  # file does not exist
 
     # test
-    url = "http://example.com"
+    url = "https://example.com"
     path = Path("fake")
     downloader.download_if_newer(url, path)
 
@@ -91,7 +91,7 @@ def test_download_if_newer(
     _parsedate.return_value = datetime(2023, 9, 2, tzinfo=timezone.utc)
 
     # test
-    url = "http://example.com"
+    url = "https://example.com"
     path = Path("fake")
     downloader.download_if_newer(url, path)
 
@@ -122,7 +122,7 @@ def test_download_if_not_newer(
     _parsedate.return_value = datetime(2023, 9, 1, tzinfo=timezone.utc)
 
     # test
-    url = "http://example.com"
+    url = "https://example.com"
     path = Path("path")
     result = downloader.download_if_newer(url, path)
 

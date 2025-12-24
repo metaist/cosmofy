@@ -62,8 +62,9 @@ def show_files(bundle: ZipFile2, args: Args) -> None:
         for name in expand_glob(names, pat):
             if name.endswith("/"):  # ignore directories
                 continue
-            if args.for_real:
-                print(bundle.read(name, password).decode("utf-8"), flush=True)
+            if args.for_real:  # write bytes straight to the terminal
+                sys.stdout.buffer.write(bundle.read(name, password))
+                sys.stdout.buffer.flush()
             else:
                 log.info(f"{banner}show: {name}")
 

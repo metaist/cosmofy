@@ -64,6 +64,9 @@ def sanitize_zip_path(dest: str) -> str:
     Raises:
         ValueError: If path contains `..` segments
     """
+    if "\x00" in dest:
+        raise ValueError(f"refusing path with null byte: {dest!r}")
+
     clean = dest.replace("\\", "/")
     if clean.startswith("/"):
         log.warning(f"Stripping leading '/' from absolute path: {dest}")
@@ -118,8 +121,16 @@ def add_path(
     # global
     dry_run: bool = False,
     level: int = logging.INFO,
+    _seen: set[str] | None = None,
 ) -> None:
     """Add `src` to `bundle` at location `dest`."""
+    _seen = _seen or set()
+    real = str(src.resolve())
+    if real in _seen:  # already done
+        log.warning(f"skipping circular symlink: {src}")
+        return
+    _seen.add(real)
+
     dest = sanitize_zip_path(dest)
     banner = get_banner(dry_run)
     if not src.exists():
@@ -138,6 +149,7 @@ def add_path(
                 force=force,
                 dry_run=dry_run,
                 level=level,
+                _seen=_seen,
             )
 
 
@@ -148,20 +160,21 @@ def add_files(bundle: ZipFile2, args: Args) -> None:
         log.debug(f"change directory: {args.chdir}")
         os.chdir(args.chdir)
 
-    root = Path.cwd().resolve()
-    for name in args.file:
-        path = Path(name)
-        try:
-            rel = path.resolve().relative_to(root)
-            dest = str(Path(args.dest) / rel) if args.dest else str(rel)
-        except ValueError:
-            # Path is not under root, use as-is
-            dest = args.dest + name if args.dest else name
-        add_path(bundle, Path(name), dest, force=args.force, dry_run=args.dry_run)
-
-    if args.chdir:
-        log.debug(f"change directory: {original}")
-        os.chdir(original)
+    try:
+        root = Path.cwd().resolve()
+        for name in args.file:
+            path = Path(name)
+            try:
+                rel = path.resolve().relative_to(root)
+                dest = str(Path(args.dest) / rel) if args.dest else str(rel)
+            except ValueError:
+                # Path is not under root, use as-is
+                dest = args.dest + name if args.dest else name
+            add_path(bundle, Path(name), dest, force=args.force, dry_run=args.dry_run)
+    finally:
+        if args.chdir:
+            log.debug(f"change directory: {original}")
+            os.chdir(original)
 
 
 def run(args: Args) -> int:

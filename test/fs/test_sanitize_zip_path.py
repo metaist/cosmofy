@@ -16,6 +16,11 @@ def test_leading_slash() -> None:
     assert sanitize_zip_path("foo/bar") == "foo/bar"
 
 
+def test_null_byte() -> None:
+    with pytest.raises(ValueError):
+        sanitize_zip_path("my\x00file")
+
+
 def test_path_traversal() -> None:
     with pytest.raises(ValueError):
         sanitize_zip_path("../etc/passwd")

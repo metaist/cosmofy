@@ -16,6 +16,7 @@ import logging
 import os
 import platform
 import stat
+import sys
 import tempfile
 
 # pkg
@@ -42,8 +43,8 @@ def move_executable(src: Path, dest: Path) -> Path:
     mode = src.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
     src.chmod(mode)
     dest.parent.mkdir(parents=True, exist_ok=True)
-
-    if platform.system() == "Windows":  # can't overwrite running executable
+    if dest == Path(sys.executable) and platform.system() == "Windows":
+        # can't overwrite running executable
         old = dest.with_suffix(dest.suffix + ".old")
         if old.exists():  # from previous update
             old.unlink()
@@ -103,14 +104,15 @@ def download(url: str, path: Path, timeout: int = COSMOFY_TIMEOUT) -> Path:
 
 def download_if_newer(url: str, path: Path, timeout: int = COSMOFY_TIMEOUT) -> Path:
     """Download `url` to `path` if `url` is newer."""
+    validate_url(url)
     if not path.exists():
         return download(url, path)
 
-    response = urlopen(Request(url, method="HEAD"), timeout=timeout)
-    last_modified = response.headers.get("Last-Modified")
-    if not last_modified:
-        log.debug("no `Last-Modified` header; re-downloading")
-        return download(url, path)
+    with urlopen(Request(url, method="HEAD"), timeout=timeout) as response:
+        last_modified = response.headers.get("Last-Modified")
+        if not last_modified:
+            log.debug("no `Last-Modified` header; re-downloading")
+            return download(url, path)
 
     try:
         local = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
@@ -148,6 +150,7 @@ def download_release(
     url: str, path: Path, expected: str, algo: str = DEFAULT_HASH
 ) -> Path | None:
     """Download release from `url` checking the hash along the way."""
+    validate_url(url)
     log.info(f"download {url} to {path}")
     with tempfile.NamedTemporaryFile(delete=False) as out:
         temp = Path(out.name)

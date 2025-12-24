@@ -6,8 +6,8 @@ The format is based on [Keep a Changelog] and this project adheres to [Semantic 
 
 Sections order is: `Fixed`, `Changed`, `Added`, `Deprecated`, `Removed`, `Security`.
 
-[keep a changelog]: http://keepachangelog.com/en/1.0.0/
-[semantic versioning]: http://semver.org/spec/v2.0.0.html
+[keep a changelog]: https://keepachangelog.com/en/1.0.0/
+[semantic versioning]: https://semver.org/spec/v2.0.0.html
 
 ---
 
@@ -36,6 +36,7 @@ These are changes that are on `main` that are not yet in `prod`.
 [#31]: https://github.com/metaist/cosmofy/issues/31
 [#32]: https://github.com/metaist/cosmofy/issues/32
 [#33]: https://github.com/metaist/cosmofy/issues/33
+[#36]: https://github.com/metaist/cosmofy/issues/35
 [#36]: https://github.com/metaist/cosmofy/issues/36
 [#37]: https://github.com/metaist/cosmofy/issues/37
 [#38]: https://github.com/metaist/cosmofy/issues/38
@@ -48,6 +49,7 @@ These are changes that are on `main` that are not yet in `prod`.
 [#49]: https://github.com/metaist/cosmofy/issues/49
 [#50]: https://github.com/metaist/cosmofy/issues/50
 [#52]: https://github.com/metaist/cosmofy/issues/52
+[#53]: https://github.com/metaist/cosmofy/issues/53
 [#54]: https://github.com/metaist/cosmofy/issues/54
 [#55]: https://github.com/metaist/cosmofy/issues/55
 [#56]: https://github.com/metaist/cosmofy/issues/56
@@ -71,11 +73,12 @@ These are changes that are on `main` that are not yet in `prod`.
 [#79]: https://github.com/metaist/cosmofy/issues/79
 [#81]: https://github.com/metaist/cosmofy/issues/81
 [#83]: https://github.com/metaist/cosmofy/issues/83
+[#86]: https://github.com/metaist/cosmofy/issues/86
 [#87]: https://github.com/metaist/cosmofy/issues/87
 [#89]: https://github.com/metaist/cosmofy/issues/89
 [#91]: https://github.com/metaist/cosmofy/issues/91
 [#92]: https://github.com/metaist/cosmofy/issues/92
-[0.2.0]: https://github.com/metaist/cosmofy/compare/0.2.0...0.1.0
+[0.2.0]: https://github.com/metaist/cosmofy/compare/0.1.0...0.2.0
 
 ## [0.2.0] - 2025-12-24T03:14:02Z
 

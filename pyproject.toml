@@ -9,7 +9,7 @@ Repository = "https://github.com/metaist/cosmofy.git"
 Changelog = "https://github.com/metaist/cosmofy/blob/main/CHANGELOG.md"
 
 [project.scripts]
-cosmofy = "cosmofy.__main__:cmd.main"
+cosmofy = "cosmofy.__main__:main"
 
 [project]
 name = "cosmofy"
@@ -72,7 +72,7 @@ exclude = ["**/_vendor/**"]
 [tool.ds.scripts] # run dev scripts <https://github.com/metaist/ds>
 # Build
 setup = "uv sync"
-build = ["uv build", "cosmo"]
+build = "uv build"
 cosmo.help = "build portable executable (cosmopolitan)"
 cosmo.shell = """
   uv run -m cosmofy bundle $@;

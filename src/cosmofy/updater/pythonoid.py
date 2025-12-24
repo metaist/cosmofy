@@ -247,7 +247,7 @@ def run_python(argv: list[str]) -> int:
         "__builtins__": __builtins__,
     }
 
-    sys.argv = args.argv
+    sys.argv = args.argv  # NOTE: intentionally destructive
     code = 0
     try:
         if args.c:  # execute in the context of the locals
