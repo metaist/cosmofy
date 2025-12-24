@@ -176,8 +176,8 @@ def run(args: Args) -> int:
         # add bits properly.
 
         # good to go
-        bundle = ZipFile2(args.bundle, mode="a")
-        add_files(bundle, args)
+        with ZipFile2(args.bundle, mode="a") as bundle:
+            add_files(bundle, args)
     except Exception as e:
         args.show_error(log, e)
         return 2

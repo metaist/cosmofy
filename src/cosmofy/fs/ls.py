@@ -260,8 +260,8 @@ def run(args: Args) -> int:
             args.file.extend([""])  # root directory
 
         # good to go
-        bundle = ZipFile2(args.bundle)
-        Runner(bundle, args).run()
+        with ZipFile2(args.bundle) as bundle:
+            Runner(bundle, args).run()
     except Exception as e:
         args.show_error(log, e)
         return 2

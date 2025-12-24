@@ -284,10 +284,10 @@ class Bundler:
     ) -> Path:
         """Return `Path` to the build entry point."""
         self.fs_copy(src, dest)
-        bundle = open_zip(dest, mode="a")
-        if venv:
-            self.bundle_venv(bundle, venv)
-        set_args(bundle, python_call(entry_point), dry_run=self.args.dry_run)
+        with open_zip(dest, mode="a") as bundle:
+            if venv:
+                self.bundle_venv(bundle, venv)
+            set_args(bundle, python_call(entry_point), dry_run=self.args.dry_run)
 
         log.info(f"bundled: {dest}")
         return dest
@@ -347,12 +347,15 @@ class Bundler:
             raise FileNotFoundError(f"cannot find script file: {script}")
 
         dest = self.fs_copy(cosmo_python, output_dir / script.stem)
-        bundle = self.bundle_venv(
-            open_zip(dest, mode="a"),
-            self.uv_sync(pkg=script.name, version=version, venv=venv, script=script),
-        )
-        add_path(bundle, script, script.name, dry_run=self.args.dry_run)
-        set_args(bundle, script.name, dry_run=self.args.dry_run)
+        with open_zip(dest, mode="a") as bundle:
+            self.bundle_venv(
+                bundle,
+                self.uv_sync(
+                    pkg=script.name, version=version, venv=venv, script=script
+                ),
+            )
+            add_path(bundle, script, script.name, dry_run=self.args.dry_run)
+            set_args(bundle, script.name, dry_run=self.args.dry_run)
 
         log.info(f"bundled: {dest}")
         return script

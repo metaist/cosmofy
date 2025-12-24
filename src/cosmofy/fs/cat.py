@@ -73,8 +73,8 @@ def run(args: Args) -> int:
     args.setup_logger()
     try:
         assert args.ensure_bundle() and args.bundle
-        bundle = ZipFile2(args.bundle)
-        show_files(bundle, args)
+        with ZipFile2(args.bundle) as bundle:
+            show_files(bundle, args)
     except Exception as e:
         args.show_error(log, e)
         return 2

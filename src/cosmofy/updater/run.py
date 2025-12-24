@@ -47,10 +47,10 @@ Options:
 
 def self_update(path: Path) -> int:
     """Run the self-updater."""
-    bundle = zipfile.ZipFile(path, "r")
-    is_newer, local, remote = check(bundle, receipt_url=RECEIPT_URL, dry_run=False)
-    if not is_newer:
-        return 0
+    with zipfile.ZipFile(path, "r") as bundle:
+        is_newer, local, remote = check(bundle, receipt_url=RECEIPT_URL, dry_run=False)
+        if not is_newer:
+            return 0
 
     url = ENV.get("RELEASE_URL", remote.release_url)
     dest = download_release(url, path, remote.hash, remote.algo)

@@ -65,12 +65,22 @@ def run(args: Args) -> int:
     try:
         assert args.ensure_bundle() and args.bundle
 
-        bundle = ZipFile2(args.bundle, mode="a")
-        for name in expand_glob(bundle.namelist(), PATH_COSMOFY + "*"):
-            remove_path(bundle, name, force=True, recursive=True, dry_run=args.dry_run)
+        with ZipFile2(args.bundle, mode="a") as bundle:
+            for name in expand_glob(bundle.namelist(), PATH_COSMOFY + "*"):
+                remove_path(
+                    bundle,
+                    name,
+                    force=True,
+                    recursive=True,
+                    dry_run=args.dry_run,
+                )
 
-        if not args.no_args:
-            set_args(bundle, remove_arg_prefix(get_args(bundle)), dry_run=args.dry_run)
+            if not args.no_args:
+                set_args(
+                    bundle,
+                    remove_arg_prefix(get_args(bundle)),
+                    dry_run=args.dry_run,
+                )
     except Exception as e:
         args.show_error(log, e)
         return 2

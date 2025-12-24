@@ -71,11 +71,11 @@ def run(args: Args) -> int:
     args.setup_logger()
     try:
         assert args.ensure_bundle() and args.bundle
-        bundle = ZipFile2(args.bundle, "a")
-        if args.val:
-            set_args(bundle, args.val, dry_run=args.dry_run)
-        else:
-            print(get_args(bundle), flush=True)  # don't log!
+        with ZipFile2(args.bundle, "a") as bundle:
+            if args.val:
+                set_args(bundle, args.val, dry_run=args.dry_run)
+            else:
+                print(get_args(bundle), flush=True)  # don't log!
     except Exception as e:
         args.show_error(log, e)
         return 2

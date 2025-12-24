@@ -96,16 +96,16 @@ def run(args: Args) -> int:
         assert args.ensure_bundle() and args.bundle
         # good to go
 
-        bundle = ZipFile2(args.bundle, mode="a")
-        for name in args.file:
-            # TODO: We need to fix `expand_glob` to only read up to the / before we can use it here.
-            remove_path(
-                bundle,
-                name,
-                force=args.force,
-                recursive=args.recursive,
-                dry_run=args.dry_run,
-            )
+        with ZipFile2(args.bundle, mode="a") as bundle:
+            for name in args.file:
+                # TODO: We need to fix `expand_glob` to only read up to the / before we can use it here.
+                remove_path(
+                    bundle,
+                    name,
+                    force=args.force,
+                    recursive=args.recursive,
+                    dry_run=args.dry_run,
+                )
     except Exception as e:
         args.show_error(log, e)
         return 2

@@ -322,22 +322,22 @@ def run(args: Args) -> int:
             err = "could not guess the --release-version, please provide it explicitly"
             raise ValueError(err)
 
-        bundle = ZipFile2(args.bundle, mode="a")
-        if not args.no_copy:
-            copy_cosmofy(bundle, dry_run=args.dry_run)
+        with ZipFile2(args.bundle, mode="a") as bundle:
+            if not args.no_copy:
+                copy_cosmofy(bundle, dry_run=args.dry_run)
 
-        if not args.no_args:
-            set_args(bundle, add_arg_prefix(get_args(bundle)), dry_run=args.dry_run)
+            if not args.no_args:
+                set_args(bundle, add_arg_prefix(get_args(bundle)), dry_run=args.dry_run)
 
-        write_receipt(
-            args.bundle,
-            bundle,
-            output=args.receipt,
-            receipt_url=args.receipt_url,
-            release_url=args.release_url,
-            release_version=args.release_version,
-            dry_run=args.dry_run,
-        )
+            write_receipt(
+                args.bundle,
+                bundle,
+                output=args.receipt,
+                receipt_url=args.receipt_url,
+                release_url=args.release_url,
+                release_version=args.release_version,
+                dry_run=args.dry_run,
+            )
     except Exception as e:
         args.show_error(log, e)
         return 2
