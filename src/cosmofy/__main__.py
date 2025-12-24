@@ -81,6 +81,12 @@ cmd = Command(
     },
 )
 
-if __name__ == "__main__":  # pragma: no cover
+
+def main() -> None:
+    """Main entry point for console scripts."""
     setup_logger()
     sys.exit(cmd.main())
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
