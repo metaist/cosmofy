@@ -6,14 +6,20 @@ from datetime import datetime
 from datetime import timezone
 from pathlib import Path
 from typing import Callable
-from typing import Dict
-from typing import List
 from urllib.request import urlopen
 import dataclasses
 import hashlib
 import json
+import logging
 import re
+import shlex
 import subprocess
+
+# pkg
+from . import DEFAULT_HASH
+from . import COSMOFY_TIMEOUT
+
+log = logging.getLogger(__name__)
 
 Checker = Callable[[str], bool]
 """Function that takes a `str` and returns a `bool` if it is ok."""
@@ -35,10 +41,7 @@ RECEIPT_ALGO = re.compile(r"^[a-z0-9-_]+$")
 RECEIPT_HASH = re.compile(r"^[a-f0-9]+$")
 """Regex to validate `Receipt.hash`."""
 
-DEFAULT_HASH = "sha256"
-"""Default hashing algorithm."""
-
-RE_VERSION = re.compile(rb"\d+\.\d+\.\d+(-[\da-zA-Z-.]+)?(\+[\da-zA-Z-.]+)?")
+RE_VERSION = re.compile(r"\d+\.\d+\.\d+(-[\da-zA-Z-.]+)?(\+[\da-zA-Z-.]+)?")
 """Regex for a semver-like version string."""
 
 
@@ -49,6 +52,27 @@ def datestr(date: datetime) -> str:
     '2000-01-01T00:00:00Z'
     """
     return date.astimezone(timezone.utc).isoformat()[:19] + "Z"
+
+
+def get_version(path: Path, default: str = "") -> str:
+    """Return `path` version or `default` if it doesn't exist.
+
+    >>> get_version(Path("fake"), "0.0.0")
+    '0.0.0'
+    """
+    version = default
+    if path.is_file():
+        try:
+            # NOTE: We need to use `shell=True` because the path is a Cosmo APE.
+            # Otherwise we get: `OSError: [Errno 8] Exec format error`
+            cmd = f"{shlex.quote(str(path.resolve()))} --version"
+            out: str = subprocess.check_output(cmd, shell=True, text=True)
+            if match := RE_VERSION.search(out):
+                version = match.group()
+        except subprocess.CalledProcessError as e:  # we can't get the version
+            log.exception(e)
+            return default
+    return version
 
 
 @dataclasses.dataclass
@@ -87,7 +111,7 @@ class Receipt:
         """Return `json`-encoded string."""
         return json.dumps(self.asdict())
 
-    def asdict(self) -> Dict[str, str]:
+    def asdict(self) -> dict[str, str]:
         """Return `dict` representation of the receipt."""
         return {
             "$schema": self.schema,
@@ -106,10 +130,10 @@ class Receipt:
         return not sum((v for v in issues.values()), [])
 
     @staticmethod
-    def find_issues(data: Dict[str, str]) -> Dict[str, List[str]]:
+    def find_issues(data: dict[str, str]) -> dict[str, list[str]]:
         """Return field names by issue that occurred during validation."""
-        issues: Dict[str, List[str]] = {"missing": [], "unknown": [], "malformed": []}
-        rules: Dict[str, Checker] = {
+        issues: dict[str, list[str]] = {"missing": [], "unknown": [], "malformed": []}
+        rules: dict[str, Checker] = {
             "$schema": lambda v: v == RECEIPT_SCHEMA,
             "kind": lambda v: v in RECEIPT_KIND,
             "date": lambda v: bool(RECEIPT_DATE.match(v)),
@@ -119,7 +143,7 @@ class Receipt:
             "release_url": lambda v: bool(v.strip()),
             "version": lambda v: bool(v.strip()),
         }
-        embedded: Dict[str, Checker] = {
+        embedded: dict[str, Checker] = {
             "hash": lambda v: isinstance(v, str),
             "version": lambda v: isinstance(v, str),
         }
@@ -149,7 +173,7 @@ class Receipt:
         return self.update(**values)
 
     @staticmethod
-    def from_dict(data: Dict[str, str]) -> Receipt:
+    def from_dict(data: dict[str, str]) -> Receipt:
         """Return receipt from a `dict`."""
         issues = Receipt.find_issues(data)
         if sum((v for v in issues.values()), []):
@@ -160,9 +184,9 @@ class Receipt:
         return Receipt(schema=schema, **_data)
 
     @staticmethod
-    def from_url(url: str) -> Receipt:
+    def from_url(url: str, timeout: int = COSMOFY_TIMEOUT) -> Receipt:
         """Return a Receipt from a URL."""
-        with urlopen(url) as response:
+        with urlopen(url, timeout=timeout) as response:
             return Receipt.from_dict(json.load(response))
 
     @staticmethod
@@ -170,8 +194,5 @@ class Receipt:
         """Return hash and version for a `path`."""
         digest = hashlib.new(algo, path.read_bytes()).hexdigest()
         if not version:
-            cmd = (f"{path.resolve()} --version",)
-            out = subprocess.run(cmd, capture_output=True, check=True, shell=True)
-            if match := RE_VERSION.search(out.stdout):
-                version = match.group().decode("utf-8")
+            version = get_version(path)
         return Receipt(algo=algo, hash=digest, version=version)

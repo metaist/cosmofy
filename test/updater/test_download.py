@@ -12,14 +12,19 @@ from urllib.error import HTTPError
 import hashlib
 
 # pkg
-from cosmofy import downloader
-from cosmofy.receipt import Receipt
+from cosmofy.updater import downloader
 
 
-@patch("cosmofy.downloader.urlopen")
-@patch("cosmofy.downloader.Path.open")
-@patch("cosmofy.downloader.Path.mkdir")
-def test_download(_mkdir: MagicMock, _open: MagicMock, _urlopen: MagicMock) -> None:
+@patch("cosmofy.updater.downloader.os.replace")
+@patch("cosmofy.updater.downloader.urlopen")
+@patch("cosmofy.updater.downloader.Path.open")
+@patch("cosmofy.updater.downloader.Path.mkdir")
+def test_download(
+    _mkdir: MagicMock,
+    _open: MagicMock,
+    _urlopen: MagicMock,
+    _os_replace: MagicMock,
+) -> None:
     """Download url."""
     # read url
     _response = MagicMock()
@@ -30,20 +35,23 @@ def test_download(_mkdir: MagicMock, _open: MagicMock, _urlopen: MagicMock) -> N
     _output = MagicMock()
     _open.return_value.__enter__.return_value = _output
 
+    # replace
+    _os_replace.return_value = None
+
     # test
-    url = "http://example.com"
+    url = "https://example.com"
     path = Path("fake")
     result = downloader.download(url, path)
 
-    _urlopen.assert_called_once_with(url)
+    _urlopen.assert_called_once_with(url, timeout=30)
     _mkdir.assert_called_once_with(parents=True, exist_ok=True)
     _output.write.assert_any_call(b"chunk1")
     _output.write.assert_any_call(b"chunk2")
     assert result == path
 
 
-@patch("cosmofy.downloader.Path.exists")
-@patch("cosmofy.downloader.download")
+@patch("cosmofy.updater.downloader.Path.exists")
+@patch("cosmofy.updater.downloader.download")
 def test_download_if_not_exists(_download: MagicMock, _exists: MagicMock) -> None:
     """Call download when there's no file."""
     # local
@@ -57,11 +65,11 @@ def test_download_if_not_exists(_download: MagicMock, _exists: MagicMock) -> Non
     _download.assert_called()
 
 
-@patch("cosmofy.downloader.Path.exists")
-@patch("cosmofy.downloader.Path.stat")
-@patch("cosmofy.downloader.urlopen")
-@patch("cosmofy.downloader.parsedate_to_datetime")
-@patch("cosmofy.downloader.download")
+@patch("cosmofy.updater.downloader.Path.exists")
+@patch("cosmofy.updater.downloader.Path.stat")
+@patch("cosmofy.updater.downloader.urlopen")
+@patch("cosmofy.updater.downloader.parsedate_to_datetime")
+@patch("cosmofy.updater.downloader.download")
 def test_download_if_newer(
     _download: MagicMock,
     _parsedate: MagicMock,
@@ -91,11 +99,11 @@ def test_download_if_newer(
     assert _download.called
 
 
-@patch("cosmofy.downloader.Path.exists")
-@patch("cosmofy.downloader.Path.stat")
-@patch("cosmofy.downloader.urlopen")
-@patch("cosmofy.downloader.parsedate_to_datetime")
-@patch("cosmofy.downloader.download")
+@patch("cosmofy.updater.downloader.Path.exists")
+@patch("cosmofy.updater.downloader.Path.stat")
+@patch("cosmofy.updater.downloader.urlopen")
+@patch("cosmofy.updater.downloader.parsedate_to_datetime")
+@patch("cosmofy.updater.downloader.download")
 def test_download_if_not_newer(
     _download: MagicMock,
     _parsedate: MagicMock,
@@ -123,9 +131,9 @@ def test_download_if_not_newer(
     assert result == path
 
 
-@patch("cosmofy.downloader.urlopen")
-@patch("cosmofy.downloader.Path.open", new_callable=mock_open)
-@patch("cosmofy.downloader.Path.mkdir")
+@patch("cosmofy.updater.downloader.urlopen")
+@patch("cosmofy.updater.downloader.Path.open", new_callable=mock_open)
+@patch("cosmofy.updater.downloader.Path.mkdir")
 def test_download_and_hash(
     _mkdir: MagicMock, _open: MagicMock, _urlopen: MagicMock
 ) -> None:
@@ -143,9 +151,9 @@ def test_download_and_hash(
     assert result == hashlib.sha256(b"chunk1").hexdigest()
 
 
-@patch("cosmofy.downloader.download_and_hash")
-@patch("cosmofy.downloader.move_executable")
-@patch("cosmofy.downloader.tempfile.NamedTemporaryFile", new_callable=mock_open)
+@patch("cosmofy.updater.downloader.download_and_hash")
+@patch("cosmofy.updater.downloader.move_executable")
+@patch("cosmofy.updater.downloader.tempfile.NamedTemporaryFile", new_callable=mock_open)
 def test_download_release(
     _temp: MagicMock, _move: MagicMock, _download: MagicMock
 ) -> None:
@@ -180,21 +188,3 @@ def test_download_release(
     )
     result = downloader.download_release(url, path, expected)
     assert result is None
-
-
-@patch("cosmofy.downloader.Receipt.from_url")
-def test_download_receipt(_from_url: MagicMock) -> None:
-    """Download a receipt."""
-    expected = Receipt()
-    _from_url.return_value = expected
-
-    url = "https://example.com/fake.json"
-    assert downloader.download_receipt(url) == expected
-
-    # not found => hint
-    _from_url.side_effect = HTTPError(url, 404, "Not Found", HTTPMessage(), None)
-    assert downloader.download_receipt(url) is None
-
-    # no hint
-    _from_url.side_effect = HTTPError(url, 500, "Server Error", HTTPMessage(), None)
-    assert downloader.download_receipt(url) is None

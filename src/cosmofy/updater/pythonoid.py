@@ -3,15 +3,10 @@
 
 # std
 from __future__ import annotations
-from importlib._bootstrap_external import SourceFileLoader  # type: ignore
+from importlib.machinery import SourceFileLoader
 from importlib.util import MAGIC_NUMBER
 from os import environ as ENV
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
 import code as repl
 import dataclasses
 import logging
@@ -24,7 +19,7 @@ import traceback
 log = logging.getLogger(__name__)
 
 
-Pkg = Tuple[str, ...]
+Pkg = tuple[str, ...]
 """Package information."""
 
 MODULE_SUFFIXES = (".py", ".pyc")
@@ -49,14 +44,42 @@ RE_MAIN = re.compile(
 )
 """Regex for detecting a main section in `bytes`."""
 
+PYTHON_CALL = "-c 'import sys; import {pkg} as _1; sys.exit(_1.{fn})'"
+"""Format for a python call."""
+
+
+# https://github.com/metaist/ds/blob/main/src/ds/parsers/pyproject_rye.py#L153C1-L174C46
+def python_call(call: str) -> str:
+    """Return python arguments a formatted `call` string.
+
+    See: https://rye.astral.sh/guide/pyproject/#call
+
+    >>> python_call("http.server")
+    '-m http.server'
+
+    >>> python_call("builtins:help") == PYTHON_CALL.format(pkg="builtins", fn="help()")
+    True
+
+    >>> python_call("builtins:print('Hello World!')") == PYTHON_CALL.format(
+    ...     pkg="builtins", fn="print('Hello World!')")
+    True
+    """
+    if ":" not in call:
+        return f"-m {call}"
+
+    pkg, fn = call.split(":", 1)
+    if not fn.endswith(")"):
+        fn = f"{fn}()"
+    return PYTHON_CALL.format(pkg=pkg, fn=fn)
+
 
 # https://github.com/python/cpython/blob/3.12/Lib/importlib/_bootstrap_external.py#L79C1-L81C55
-def _pack_uint32(x: Union[int, float]) -> bytes:
+def _pack_uint32(x: int | float) -> bytes:
     """Convert a 32-bit integer to little-endian."""
     return (int(x) & 0xFFFFFFFF).to_bytes(4, "little")
 
 
-def compile_python(path: Path, source: Optional[bytes] = None) -> bytearray:
+def compile_python(path: Path, source: bytes | None = None) -> bytearray:
     """Return the bytecode."""
     source = path.read_bytes() if source is None else source
     stats = path.stat()
@@ -105,7 +128,7 @@ class PythonArgs:
     See: https://docs.python.org/3/using/cmdline.html
     """
 
-    c: Optional[str] = None
+    c: str | None = None
     """Command to execute."""
 
     h: bool = False
@@ -114,7 +137,7 @@ class PythonArgs:
     i: bool = ENV.get("PYTHONINSPECT", "") == "x"
     """Interactive mode."""
 
-    m: Optional[str] = None
+    m: str | None = None
     """Module name."""
 
     q: bool = False
@@ -126,14 +149,14 @@ class PythonArgs:
     VV: bool = False
     """Verbose version information."""
 
-    script: Optional[str] = None
+    script: str | None = None
     """Script to execute."""
 
-    argv: List[str] = dataclasses.field(default_factory=list)
+    argv: list[str] = dataclasses.field(default_factory=list)
     """Remaining arguments to <script>, <module>, or <command>."""
 
     @staticmethod
-    def parse(argv: List[str]) -> PythonArgs:
+    def parse(argv: list[str]) -> PythonArgs:
         """Parse a subset of python command-line args."""
         args = PythonArgs()
         UNSUPPORTED = """
@@ -143,9 +166,9 @@ class PythonArgs:
         """.split()
         while argv:
             arg = argv.pop(0)
-            if arg.startswith("--"):
-                pass
-            elif arg.startswith("-") and len(arg) > 2:  # expand
+            if (
+                arg.startswith("-") and not arg.startswith("--") and len(arg) > 2
+            ):  # expand
                 argv = [f"-{a}" for a in arg[1:]] + argv
                 continue
 
@@ -189,7 +212,7 @@ class PythonArgs:
         return args
 
 
-def run_python(argv: List[str]) -> int:
+def run_python(argv: list[str]) -> int:
     """Simulate running python with the given args."""
     try:
         args = PythonArgs.parse(argv)
@@ -214,7 +237,7 @@ def run_python(argv: List[str]) -> int:
         # During testing, __builtins__ is a dict.
         loader = __builtins__.__loader__
 
-    local: Dict[str, object] = {
+    local: dict[str, object] = {
         "__name__": "__main__",
         "__doc__": None,
         "__package__": None,

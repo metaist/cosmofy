@@ -5,19 +5,20 @@ from __future__ import annotations
 from datetime import datetime
 from fnmatch import fnmatch
 from operator import attrgetter
-from typing import Union
 from zipfile import ZIP_DEFLATED
 from zipfile import ZipFile
 from zipfile import ZipInfo
 import logging
 
-
 log = logging.getLogger(__name__)
-now = datetime.now()
 
 
 class ZipFile2(ZipFile):
-    """Extension of `zipfile.ZipFile` that allows removing members."""
+    """Extension of `zipfile.ZipFile` that allows removing members.
+
+    Note: This class is not safe for concurrent access from multiple
+    processes. Callers should ensure exclusive access to the archive.
+    """
 
     _writing: bool
 
@@ -39,11 +40,14 @@ class ZipFile2(ZipFile):
     def add_file(
         self,
         path: str,
-        data: Union[bytearray, bytes, str],
+        data: bytearray | bytes | str,
         mode: int = 0o644,
-        date: datetime = now,
+        date: datetime | None = None,
     ) -> ZipFile2:
         """Add a file to an archive with appropriate permissions."""
+        if date is None:
+            date = datetime.now()
+
         info = ZipInfo(path, date.timetuple()[:6])
         info.compress_type = ZIP_DEFLATED
         info.external_attr = (0x8000 | (mode & 0xFFFF)) << 16
@@ -52,7 +56,7 @@ class ZipFile2(ZipFile):
         return self
 
     # https://github.com/python/cpython/commit/659eb048cc9cac73c46349eb29845bc5cd630f09
-    def remove(self, member: Union[str, ZipInfo]) -> ZipFile2:
+    def remove(self, member: str | ZipInfo) -> ZipFile2:
         """Remove a file from the archive. The archive must be open with mode 'a'"""
         if self.mode != "a":
             raise RuntimeError("remove() requires mode 'a'")

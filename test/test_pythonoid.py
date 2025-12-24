@@ -9,9 +9,9 @@ from unittest.mock import patch
 import pytest
 
 # pkg
-from cosmofy import pythonoid
-from cosmofy.pythonoid import PythonArgs
-from cosmofy.pythonoid import run_python
+from cosmofy.updater import pythonoid
+from cosmofy.updater.pythonoid import PythonArgs
+from cosmofy.updater.pythonoid import run_python
 
 
 def test_main_detector() -> None:
@@ -58,7 +58,7 @@ def test_parse() -> None:
         script="foo.py", argv=["foo.py", "--extra"]
     )
 
-    with patch("cosmofy.updater.sys.stdin") as _stdin:
+    with patch("cosmofy.updater.run.sys.stdin") as _stdin:
         _stdin.read.return_value = "f = 42"
         _stdin.isatty.side_effect = [False, True]  # once as non-TTY, once as TTY
         assert PythonArgs.parse(split("-")) == PythonArgs(c="f = 42", argv=["-"])
@@ -95,7 +95,7 @@ def test_run() -> None:
     assert run_python(split("-m examples.pkg-with-main")) == 0
     assert run_python(split("examples/single-file/file-with-main.py")) == 0
 
-    with patch("cosmofy.pythonoid.repl.interact") as _interact:
+    with patch("cosmofy.updater.pythonoid.repl.interact") as _interact:
         assert run_python(split("-i")) == 0
         assert _interact.called
 

@@ -1,18 +1,6 @@
 [build-system]
-requires = ["setuptools >= 40.8.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-data]
-cosmofy = ["py.typed"]
-
-[project.scripts]
-cosmofy = "cosmofy.__main__:main"
-
-[tool.setuptools.dynamic]
-version = { attr = "cosmofy.__version__" }
+requires = ["uv_build>=0.9.9,<0.10.0"]
+build-backend = "uv_build"
 
 [project.urls]
 Homepage = "https://github.com/metaist/cosmofy"
@@ -20,33 +8,21 @@ Documentation = "https://metaist.github.io/cosmofy/"
 Repository = "https://github.com/metaist/cosmofy.git"
 Changelog = "https://github.com/metaist/cosmofy/blob/main/CHANGELOG.md"
 
+[project.scripts]
+cosmofy = "cosmofy.__main__:cmd.main"
+
 [project]
 name = "cosmofy"
+version = "0.1.0"
+
+authors = [{ name = "Metaist LLC", email = "metaist@metaist.com" }]
 description = "Cosmopolitan Python Bundler"
 keywords = ["cosmopolitan", "bundler"]
-
-dynamic = ["version"]
-requires-python = ">=3.8"
-dependencies = [
-  # app => version pinned exactly
-]
-optional-dependencies = { dev = [
-  # dev => version latest
-  "build",
-  "cogapp",
-  "coverage",
-  "ds-run",
-  "mypy",
-  "pdoc3",
-  "pip",
-  "pyright",
-  "pytest-cov",
-  "pytest",
-  "ruff",
-] }
+license = "MIT"
+license-files = ["LICENSE.md"]
 readme = "README.md"
-license = { text = "MIT" }
-authors = [{ name = "Metaist LLC", email = "metaist@metaist.com" }]
+
+requires-python = ">=3.10,<3.13"
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
@@ -56,8 +32,6 @@ classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -65,24 +39,77 @@ classifiers = [
   "Typing :: Typed",
 ]
 
+dependencies = [
+  # app => version pinned exactly
+]
+
+[dependency-groups]
+dev = [
+  # dev => version latest
+  "cogapp",
+  "coverage",
+  "ds-run",
+  "mypy",
+  "pdoc3",
+  "pip", # for mypy
+  "pyright",
+  "pytest-cov",
+  "pytest",
+  "ruff",
+  "ty",
+]
+
 [tool.coverage.report]
+exclude_lines = ["pragma: no cover", "@overload"]
 exclude_also = ["no cover: start(?s:.)*?no cover: stop"]
 
+[tool.mypy]
+disable_error_code = "unused-ignore"
+
+[tool.pyright]
+exclude = ["**/_vendor/**"]
+
 [tool.ds.scripts] # run dev scripts <https://github.com/metaist/ds>
+# Build
+setup = "uv sync"
+build = ["uv build", "cosmo"]
+cosmo.help = "build portable executable (cosmopolitan)"
+cosmo.shell = """
+  uv run cosmofy src/cosmofy \
+    --output dist/cosmofy \
+    --args '-m cosmofy --cosmo' \
+    --release-url "https://github.com/metaist/cosmofy/releases/latest/download/cosmofy" \
+    $@
+"""
+clean = """
+  rm -rf .coverage;
+  rm -rf .mypy_cache;
+  rm -rf .pytest_cache;
+  rm -rf .ruff_cache;
+  rm -rf dist;
+  rm -rf htmlcov;
+  rm -rf src/*.egg-info
+"""
+
 # Lint
 lint = ["ruff-*", "+cspell"]
-ruff-format = "ruff format ${@:-.}"
-ruff-lint = "ruff check --fix ${@:-.}"
-cspell = "cspell --gitignore '**/*.{py,txt,md,markdown}'"
+ruff-format = "uvx ruff format ${@:-.}"
+ruff-lint = "uvx ruff check --fix ${@:-.}"
+cspell = "npx --yes cspell lint --unique --gitignore --exclude '**/_vendor/**' '**/*.{py,txt,md,markdown}'"
 
 # Type Check
-types = ["pyright", "mypy"]
-pyright = "pyright src test"
+types = ["ty", "pyrefly", "pyright", "mypy"]
+ty = "uvx ty check --python-version ${PYTHON_VERSION:-3.10}"
+pyrefly = "uvx pyrefly check --python-version ${PYTHON_VERSION:-3.10}"
+pyright = "npx --yes pyright --pythonversion ${PYTHON_VERSION:-3.10} src test"
 mypy = """
   mypy \
     --strict \
     --install-types \
     --non-interactive \
+    --exclude '/_vendor/' \
+    --exclude '/.venv/' \
+    --python-version ${PYTHON_VERSION:-3.10} \
     src test
 """
 
@@ -94,12 +121,14 @@ test.shell = """
     pytest \
       --doctest-modules \
       --doctest-ignore-import-errors \
+      "--ignore-glob=*/_vendor/*" \
+      "--ignore-glob=*/.venv/*" \
       $@ src test;
-  coverage report --omit=src/cog_helpers.py -m
+  coverage report --omit='src/cog_helpers.py,*/_vendor/*' -m
 """
 
 coverage-report = "coverage html"
-coverage-serve = { shell = "python -m http.server 8080", cwd = "htmlcov" }
+coverage-serve = { shell = "uv run -m http.server 8080", cwd = "htmlcov" }
 coverage = ["coverage-*"]
 
 # Documentation
@@ -125,31 +154,14 @@ dev.composite = ["lint", "types", "test"]
 dev-all.help = "check every supported python version"
 dev-all.shell = """
   ds lint;
-  versions=($(grep -oP '(?<=Python :: )[0-9]+\\.[0-9]+' pyproject.toml));
+  versions=($(sed -n 's/.*Python :: \\([0-9][0-9]*\\.[0-9][0-9]*\\)",*/\\1/p' pyproject.toml));
   for v in ${versions[@]};
   do
+    PYTHON_VERSION=$v
     uv run --isolated --all-extras --python $v -- ds types test;
+    if [[ $? != 0 ]]; then exit $?; fi;
     echo;
   done;
-"""
-
-# Build
-cosmo = """
-  cosmofy src/cosmofy \
-    --output dist/cosmofy \
-    --args '-m cosmofy --cosmo' \
-    --release-url "https://github.com/metaist/cosmofy/releases/latest/download/cosmofy" \
-    $@
-"""
-build = ["pip install -e .", "python -m build", "cosmo"]
-clean = """
-  rm -rf .mypy_cache;
-  rm -rf .pytest_cache;
-  rm -rf .ruff_cache;
-  rm -rf dist;
-  rm -rf htmlcov;
-  rm -rf src/*.egg-info
-  rm -rf .coverage;
 """
 
 # Release
@@ -165,5 +177,8 @@ release.shell = """
   git push --tags;
   git checkout main;
   git merge --no-ff --no-edit prod;
-  git push
+  git push;
+
+  awk 'BEGIN {count=0} /---/ {count++} count==2 && !/---/ {print} count==3 {exit}' \
+  CHANGELOG.md | gh release create $1 dist/* --draft --verify-tag --title $1 --notes-file -
 """

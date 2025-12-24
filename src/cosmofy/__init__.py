@@ -1,4 +1,12 @@
 """cosmofy: Cosmopolitan Python Bundler"""
 
-__version__ = "0.1.0"
-__pubdate__ = "2024-09-18T18:55:19Z"
+# std
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version
+
+try:
+    __version__ = version("cosmofy")
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.0.0"
+
+__pubdate__ = "unpublished"

@@ -10,8 +10,8 @@ import json
 import pytest
 
 # pkg
-from cosmofy.receipt import Receipt
-from cosmofy.receipt import RECEIPT_SCHEMA
+from cosmofy.updater.receipt import Receipt
+from cosmofy.updater.receipt import RECEIPT_SCHEMA
 
 
 def test_is_newer() -> None:
@@ -109,8 +109,8 @@ def test_from_dict() -> None:
         Receipt.from_dict(data)
 
 
-@patch("cosmofy.receipt.json.load")
-@patch("cosmofy.receipt.urlopen")
+@patch("cosmofy.updater.receipt.json.load")
+@patch("cosmofy.updater.receipt.urlopen")
 def test_from_url(_urlopen: MagicMock, _load: MagicMock) -> None:
     """Receipt from url."""
     _urlopen.return_value.read.return_value = b"{}"
@@ -119,20 +119,27 @@ def test_from_url(_urlopen: MagicMock, _load: MagicMock) -> None:
         Receipt.from_url("https://example.com/foo.json")
 
 
-@patch("cosmofy.receipt.hashlib.new")
-@patch("cosmofy.receipt.Path.read_bytes")
-@patch("cosmofy.receipt.subprocess.run")
-def test_from_path(_run: MagicMock, _read_bytes: MagicMock, _new: MagicMock) -> None:
+@patch("cosmofy.updater.receipt.hashlib.new")
+@patch("cosmofy.updater.receipt.Path.read_bytes")
+@patch("cosmofy.updater.receipt.Path.is_file")
+@patch("cosmofy.updater.receipt.subprocess.check_output")
+def test_from_path(
+    _check_output: MagicMock,
+    _read_bytes: MagicMock,
+    _is_file: MagicMock,
+    _new: MagicMock,
+) -> None:
     """Receipt with hash and version."""
     fake_hash = "0123456789abcdef"
-    fake_ver = b"0.1.2"
+    fake_ver = "0.1.2"
     _new.return_value.hexdigest.return_value = fake_hash
     _read_bytes.return_value = b"fake content"
-    _run.return_value.stdout = fake_ver
+    _is_file.return_value = True
+    _check_output.return_value = fake_ver
     assert Receipt.from_path(Path("fake")) == Receipt(hash=fake_hash, version="0.1.2")
     assert Receipt.from_path(Path("fake"), version="1.2.3") == Receipt(
         hash=fake_hash, version="1.2.3"
     )
 
-    _run.return_value.stdout = b"no version information"
+    _check_output.return_value = "no version information"
     assert Receipt.from_path(Path("fake")) == Receipt(hash=fake_hash, version="")
