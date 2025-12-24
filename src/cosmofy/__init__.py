@@ -9,4 +9,4 @@ try:
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0"
 
-__pubdate__ = "2025-12-24T03:14:02Z"
+__pubdate__ = "2025-12-24T18:35:27Z"
