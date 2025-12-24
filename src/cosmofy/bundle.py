@@ -51,6 +51,13 @@ DEFAULT_CACHE_DIR = Path.home() / ".cache" / "cosmofy"
 COSMOFY_CACHE_DIR = ENV.get("COSMOFY_CACHE_DIR", "")
 """Path to cache directory."""
 
+BUNDLE_EXCLUDE = {
+    "direct_url.json",
+    "uv_build.json",
+    "uv_cache.json",
+}
+"""Exclude uv artifacts."""
+
 
 usage = f"""\
 Build a Python project into a Cosmopolitan bundle.
@@ -273,6 +280,8 @@ class Bundler:
         pkgs = venv_site_packages(venv).parent
         for dirname, _, files in os.walk(pkgs):
             for f in files:
+                if f in BUNDLE_EXCLUDE and ".dist-info" in str(dirname):
+                    continue
                 src = Path(dirname) / f
                 rel = src.relative_to(pkgs)
                 dest = "/".join(("Lib",) + rel.parts)
