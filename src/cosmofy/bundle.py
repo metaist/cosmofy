@@ -4,6 +4,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from importlib.metadata import distributions
+from importlib.metadata import distribution
 from os import environ as ENV
 from pathlib import Path
 from typing import Literal
@@ -139,16 +140,19 @@ def venv_site_packages(venv: Path) -> Path:
     raise FileNotFoundError(f"cannot find `site-packages` in {venv}")
 
 
-def console_scripts_from_venv(venv: Path) -> dict[str, str]:
-    """Return `console_scripts` in a `venv`."""
-    # TODO fix this to only get the console_scripts for the current package.
+def console_scripts_from_venv(pkg: str, venv: Path) -> dict[str, str]:
+    """Get `console_scripts` for a specific package from a `venv`."""
     sp = venv_site_packages(venv)
-    out: dict[str, str] = {}
+    pkg_normalized = pkg.lower().replace("_", "-").replace(".", "-")  # PEP 503
     for dist in distributions(path=[str(sp)]):
-        for ep in dist.entry_points:
-            if ep.group == "console_scripts":
-                out[ep.name] = ep.value
-    return out
+        dist_name = dist.metadata["Name"].lower().replace("_", "-").replace(".", "-")
+        if dist_name == pkg_normalized:
+            return {
+                ep.name: ep.value
+                for ep in dist.entry_points
+                if ep.group == "console_scripts"
+            }
+    return {}
 
 
 class Bundler:
@@ -307,7 +311,7 @@ class Bundler:
         venv = self.uv_sync(pkg=pkg, version=version, venv=venv)
         # have all deps built
 
-        entry_points = console_scripts_from_venv(venv)
+        entry_points = console_scripts_from_venv(pkg, venv)
         if not self.args.entry:
             self.args.entry = list(entry_points.keys())
 
