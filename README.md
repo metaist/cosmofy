@@ -77,22 +77,33 @@ uvx cosmofy bundle --script myscript.py # produces `dist/myscript`
 
 ## Self Updater
 
-If you provide `--receipt-url` or `--release-url`, `cosmofy` will add a
-self-updater to the output bundle.
+> [!WARNING]
+> This is an experimental feature. See [Security Considerations](#security-considerations).
+
+There is experimental support for [adding a self-updater](#cosmofy-updater-add) to a cosmofy bundle:
+
+```bash
+uvx cosmofy updater add dist/my_cmd # produces dist/mc_cmd.json
+```
+
+This produces a `.json` receipt that you should publish together with your bundle.
 
 - If the bundle is run with `--self-update` anywhere in the arguments,
-  `cosmofy.updater` will run. It will compare it's internal build
+  the cosmofy updater will run. It will compare it's internal build
   date with the date at `--receipt-url` and will download any updates, if
   they exist.
 
 - Otherwise, the bundle will run as normal by calling `--args`.
   [See below](#supported-python-cli) for minor limitations.
 
-<!--[[[cog
-# from cosmofy.updater import USAGE
-# cog.outl(f"\n```text\n{USAGE[USAGE.find('Usage:'):]}```\n")
-]]]-->
-<!--[[[end]]]-->
+## Security Considerations
+
+The self-updater verifies downloaded binaries against the hash in the receipt,
+but does not cryptographically verify the receipt itself. If you control the
+receipt hosting, this provides integrity verification. For higher-assurance
+scenarios, receipt signing is planned for a future release (see [#53]).
+
+[#53]: https://github.com/metaist/cosmofy/issues/53
 
 ## Supported Python CLI
 
