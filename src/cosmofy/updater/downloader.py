@@ -104,6 +104,7 @@ def download(url: str, path: Path, timeout: int = COSMOFY_TIMEOUT) -> Path:
 
 def download_if_newer(url: str, path: Path, timeout: int = COSMOFY_TIMEOUT) -> Path:
     """Download `url` to `path` if `url` is newer."""
+    validate_url(url)
     if not path.exists():
         return download(url, path)
 
@@ -149,6 +150,7 @@ def download_release(
     url: str, path: Path, expected: str, algo: str = DEFAULT_HASH
 ) -> Path | None:
     """Download release from `url` checking the hash along the way."""
+    validate_url(url)
     log.info(f"download {url} to {path}")
     with tempfile.NamedTemporaryFile(delete=False) as out:
         temp = Path(out.name)
