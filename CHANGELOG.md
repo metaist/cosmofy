@@ -78,7 +78,7 @@ These are changes that are on `main` that are not yet in `prod`.
 [#89]: https://github.com/metaist/cosmofy/issues/89
 [#91]: https://github.com/metaist/cosmofy/issues/91
 [#92]: https://github.com/metaist/cosmofy/issues/92
-[0.2.0]: https://github.com/metaist/cosmofy/compare/0.2.0...0.1.0
+[0.2.0]: https://github.com/metaist/cosmofy/compare/0.1.0...0.2.0
 
 ## [0.2.0] - 2025-12-24T03:14:02Z
 
