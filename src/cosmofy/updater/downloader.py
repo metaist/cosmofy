@@ -16,6 +16,7 @@ import logging
 import os
 import platform
 import stat
+import sys
 import tempfile
 
 # pkg
@@ -42,8 +43,8 @@ def move_executable(src: Path, dest: Path) -> Path:
     mode = src.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
     src.chmod(mode)
     dest.parent.mkdir(parents=True, exist_ok=True)
-
-    if platform.system() == "Windows":  # can't overwrite running executable
+    if dest == Path(sys.executable) and platform.system() == "Windows":
+        # can't overwrite running executable
         old = dest.with_suffix(dest.suffix + ".old")
         if old.exists():  # from previous update
             old.unlink()
