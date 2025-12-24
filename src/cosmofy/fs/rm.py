@@ -16,6 +16,8 @@ from cosmofy.baton import arg
 from cosmofy.baton import Command
 from cosmofy.zipfile2 import ZipFile2
 
+from . import expand_glob
+
 log = logging.getLogger(__name__)
 
 usage = f"""\
@@ -97,15 +99,16 @@ def run(args: Args) -> int:
         # good to go
 
         with ZipFile2(args.bundle, mode="a") as bundle:
-            for name in args.file:
-                # TODO: We need to fix `expand_glob` to only read up to the / before we can use it here.
-                remove_path(
-                    bundle,
-                    name,
-                    force=args.force,
-                    recursive=args.recursive,
-                    dry_run=args.dry_run,
-                )
+            names = bundle.namelist()
+            for pat in args.file:
+                for name in expand_glob(names, pat):
+                    remove_path(
+                        bundle,
+                        name,
+                        force=args.force,
+                        recursive=args.recursive,
+                        dry_run=args.dry_run,
+                    )
     except Exception as e:
         args.show_error(log, e)
         return 2

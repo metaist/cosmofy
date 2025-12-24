@@ -66,7 +66,7 @@ def run(args: Args) -> int:
         assert args.ensure_bundle() and args.bundle
 
         with ZipFile2(args.bundle, mode="a") as bundle:
-            for name in expand_glob(bundle.namelist(), PATH_COSMOFY + "*"):
+            for name in expand_glob(bundle.namelist(), PATH_COSMOFY + "**"):
                 remove_path(
                     bundle,
                     name,

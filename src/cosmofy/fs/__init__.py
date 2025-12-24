@@ -1,13 +1,22 @@
 # std
-from fnmatch import fnmatchcase
+from fnmatch import translate
 from typing import Iterator
+import re
 
 
 def shell_match(name: str, pat: str) -> bool:
-    """Match following weird starts-with-dot rules."""
+    """Match following shell glob rules (* doesn't match /, ** matches anything)."""
     if name.startswith(".") and not pat.startswith("."):
         return False
-    return fnmatchcase(name, pat)
+
+    # Protect ** patterns with placeholders
+    pat = pat.replace("**/", "\x00")  # **/ matches zero or more dirs
+    pat = pat.replace("**", "\x01")  # ** at end matches anything
+    regex = translate(pat)
+    regex = regex.replace(".*", "[^/]*")  # `*` => doesn't match `/``
+    regex = regex.replace("\x00", "(.*/)?")  # `**/` => 0+ path segments
+    regex = regex.replace("\x01", ".*")  # `**` => anything
+    return re.match(regex, name) is not None
 
 
 def expand_glob(names: list[str], pat: str) -> Iterator[str]:
