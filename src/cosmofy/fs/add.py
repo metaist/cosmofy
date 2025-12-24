@@ -31,6 +31,9 @@ Arguments:
 {common_args}
   <FILE>...                 files relative to current directory to add
 
+  tip: Use `--` to separate options from filenames that start with `-`
+  Example: cosmofy fs add bundle.zip -- -weird-filename.txt
+
 Options:
   -f, --force               overwrite existing files
       --chdir <PATH>        change to this directory before adding

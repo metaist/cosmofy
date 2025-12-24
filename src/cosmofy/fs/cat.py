@@ -29,6 +29,9 @@ Arguments:
 {common_args}
   <FILE>...                 one or more file patterns to show
 
+  tip: Use `--` to separate options from filenames that start with `-`
+  Example: cosmofy fs cat bundle.zip -- -weird-filename.txt
+
 Options:
   -p, --prompt              prompt for a decryption password
 

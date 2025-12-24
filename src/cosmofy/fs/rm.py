@@ -27,6 +27,9 @@ Arguments:
 {common_args}
   <FILE>...                 files to remove
 
+  tip: Use `--` to separate options from filenames that start with `-`
+  Example: cosmofy fs rm bundle.zip -- -weird-filename.txt
+
 Options:
   -f, --force               ignore nonexistent files
   -r, --recursive           recursively remove directories
