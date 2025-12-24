@@ -19,6 +19,56 @@ These are changes that are on `main` that are not yet in `prod`.
 
 ---
 
+[#42]: https://github.com/metaist/cosmofy/issues/42
+[#58]: https://github.com/metaist/cosmofy/issues/58
+[#94]: https://github.com/metaist/cosmofy/issues/94
+[#95]: https://github.com/metaist/cosmofy/issues/95
+[#96]: https://github.com/metaist/cosmofy/issues/96
+[#97]: https://github.com/metaist/cosmofy/issues/97
+[#99]: https://github.com/metaist/cosmofy/issues/99
+[#100]: https://github.com/metaist/cosmofy/issues/100
+[#102]: https://github.com/metaist/cosmofy/issues/102
+[#103]: https://github.com/metaist/cosmofy/issues/103
+[#104]: https://github.com/metaist/cosmofy/issues/104
+[#105]: https://github.com/metaist/cosmofy/issues/105
+[#106]: https://github.com/metaist/cosmofy/issues/106
+[#107]: https://github.com/metaist/cosmofy/issues/107
+[#108]: https://github.com/metaist/cosmofy/issues/108
+[#109]: https://github.com/metaist/cosmofy/issues/109
+[0.2.1]: https://github.com/metaist/cosmofy/compare/0.2.0...0.2.1
+
+## [0.2.1] - 2025-12-24T18:35:27Z
+
+**Fixed**
+
+- [#42] minor typos; added links in README
+- [#58] only do the Windows dance if literally trying to replace `sys.executable`
+- [#96] files not saving to cache
+- [#97], [#98] executable permissions for Cosmopolitan Python
+- [#99] nothing being logged in binary build
+- [#95] don't search for `pyproject.toml` when you only have `--script` to bundle
+- [#104] error when using `cosmofy fs ls` with `--sort none`
+- [#105] restore working directory after error when using `cosmofy fs add` with `--chdir`
+- [#103] use context manager for `urlopen` even for `HEAD`
+
+**Changed**
+
+- [#106] `cosmofy fs cat` outputs raw bytes to `sys.stdout` instead of decoding to UTF-8
+
+**Added**
+
+- [#94] pure Python limitation to README
+- [#107] clearer docstring for `expand_glob`; literal paths are returned exactly
+- [#100] document that `pythonoid.run_python` intentionally destroys `sys.argv`
+
+**Security**
+
+- [#102] call `validate_url` at the start of all the `download_*` functions
+- [#109] reject paths with null bytes
+- [#108] don't follow circular symlinks endlessly
+
+---
+
 [#14]: https://github.com/metaist/cosmofy/issues/14
 [#15]: https://github.com/metaist/cosmofy/issues/15
 [#16]: https://github.com/metaist/cosmofy/issues/16

@@ -41,6 +41,7 @@
     "pythonversion",
     "removeprefix",
     "setuptools",
+    "urlopen",
     "venv",
     "zinfo"
   ]
