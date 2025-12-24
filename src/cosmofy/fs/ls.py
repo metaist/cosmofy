@@ -199,21 +199,23 @@ class Runner:
         """Sort the selected files."""
         if self.args.sort == "none":
             yield from files
+            return
 
         key: Callable[[ZipInfo], Any]
         reverse = self.args.reverse
-        if self.args.sort == "name":
-            key = attrgetter("filename")  # default
-        elif self.args.sort == "size":
-            key = attrgetter("file_size")
-            reverse = not reverse  # biggest first
-        elif self.args.sort == "time":
-            key = attrgetter("date_time")
-            reverse = not reverse  # newest first
-        elif self.args.sort == "extension":
-            key = self.get_extension
-        else:
-            raise ValueError(f"Unknown option for `--sort`: {self.args.sort}")
+        match self.args.sort:
+            case "name":
+                key = attrgetter("filename")  # default
+            case "size":
+                key = attrgetter("file_size")
+                reverse = not reverse  # biggest first
+            case "time":
+                key = attrgetter("date_time")
+                reverse = not reverse  # newest first
+            case "extension":
+                key = self.get_extension
+            case _:  # pragma: no cover
+                raise ValueError(f"Unknown option for `--sort`: {self.args.sort}")
 
         items = sorted(files, key=key, reverse=reverse)
         yield from items
