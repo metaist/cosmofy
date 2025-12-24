@@ -13,7 +13,6 @@ import hashlib
 
 # pkg
 from cosmofy.updater import downloader
-from cosmofy.updater.receipt import Receipt
 
 
 @patch("cosmofy.updater.downloader.os.replace")
@@ -189,21 +188,3 @@ def test_download_release(
     )
     result = downloader.download_release(url, path, expected)
     assert result is None
-
-
-# @patch("cosmofy.downloader.Receipt.from_url")
-# def test_download_receipt(_from_url: MagicMock) -> None:
-#     """Download a receipt."""
-#     expected = Receipt()
-#     _from_url.return_value = expected
-
-#     url = "https://example.com/fake.json"
-#     assert downloader.download_receipt(url) == expected
-
-#     # not found => hint
-#     _from_url.side_effect = HTTPError(url, 404, "Not Found", HTTPMessage(), None)
-#     assert downloader.download_receipt(url) is None
-
-#     # no hint
-#     _from_url.side_effect = HTTPError(url, 500, "Server Error", HTTPMessage(), None)
-#     assert downloader.download_receipt(url) is None

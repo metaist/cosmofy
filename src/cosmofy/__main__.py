@@ -44,7 +44,7 @@ Options:
 def setup_logger() -> None:
     """Setup root logger, if needed."""
     root = logging.getLogger()
-    if not root.handlers:
+    if not root.handlers:  # pragma: no cover
         handler = ColorHandler()
         handler.setFormatter(ColorFormatter(log_normal))
         logging.basicConfig(level=logging.INFO, handlers=[handler])

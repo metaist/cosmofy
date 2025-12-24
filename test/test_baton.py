@@ -250,6 +250,13 @@ def test_actions() -> None:
     with pytest.raises(ValueError, match="invalid value"):
         baton.parse(X, split("--choice x"))
 
+    with pytest.raises(ValueError, match="value is required"):
+        baton.parse(X, split("--choice"))
+    with pytest.raises(ValueError, match="value is required"):
+        baton.parse(X, split("--include"))
+    with pytest.raises(ValueError, match="value is required"):
+        baton.parse(X, split("--files"))
+
 
 def test_subcommands() -> None:
     @dataclass
@@ -331,21 +338,3 @@ def test_edge() -> None:
 
     have = baton.parse(X, split("-- -weird-file"))
     assert have.pos == "-weird-file"
-
-    with pytest.raises(ValueError, match="unknown action"):
-        baton._do_action(
-            object(),
-            baton.Arg(
-                long="--fake",
-                short="-f",
-                field_name="fake",
-                field_type=str,
-                item_type=str,
-                choices=[],
-                action="unknown",  # type: ignore
-                required=False,
-                positional=False,
-                env="",
-            ),
-            "value",
-        )

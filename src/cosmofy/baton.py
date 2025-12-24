@@ -24,6 +24,16 @@ import logging
 import re
 import sys
 
+# TODO py3.10
+if sys.version_info >= (3, 11):  # pragma: no cover
+    from typing import assert_never
+else:  # pragma: no cover
+
+    def assert_never(arg: Any, /) -> None:
+        value = repr(arg)
+        raise AssertionError(f"Expected code to be unreachable, but got: {value}")
+
+
 Action = Literal[
     "",
     "store",
@@ -197,51 +207,52 @@ def _do_action(ctx: object, spec: Arg, val: str | list[str] = "") -> None:
     """Apply a parsed value to the context object."""
     name = spec.field_name
     kind = spec.item_type
-    action = spec.action
-
-    if action == "store":
-        if spec.choices and val not in spec.choices:
-            err = f"invalid value '{val}' for {spec.long}"
-            err += f"\n  [choices: {', '.join(spec.choices)}]"
-            raise ValueError(err)
-        setattr(ctx, name, kind(val))
-    elif action == "store_bool":
-        assert isinstance(val, str)
-        setattr(ctx, name, val.lower() in ("1", "true", "yes", "on", "y", "t"))
-    elif action == "store_true":
-        setattr(ctx, name, True)
-    elif action == "store_false":
-        setattr(ctx, name, False)
-    elif action == "append":
-        getattr(ctx, name).append(kind(val))
-    elif action == "extend":
-        getattr(ctx, name).extend(kind(v) for v in val)
-    elif action == "count":
-        setattr(ctx, name, getattr(ctx, name) + 1)
-    else:
-        raise ValueError(f"unknown action: '{action}'")
+    match spec.action:
+        case "store":
+            if spec.choices and val not in spec.choices:
+                err = f"invalid value '{val}' for {spec.long}"
+                err += f"\n  [choices: {', '.join(spec.choices)}]"
+                raise ValueError(err)
+            setattr(ctx, name, kind(val))
+        case "store_bool":
+            assert isinstance(val, str)
+            setattr(ctx, name, val.lower() in ("1", "true", "yes", "on", "y", "t"))
+        case "store_true":
+            setattr(ctx, name, True)
+        case "store_false":
+            setattr(ctx, name, False)
+        case "append":
+            getattr(ctx, name).append(kind(val))
+        case "extend":
+            getattr(ctx, name).extend(kind(v) for v in val)
+        case "count":
+            setattr(ctx, name, getattr(ctx, name) + 1)
+        case _:  # pragma: no cover
+            assert_never(spec.action)
 
 
 def _parse_optional(ctx: object, spec: Arg, argv: list[str]) -> None:
     """Parse an optional argument, consuming values from argv."""
-    action = spec.action
-    if action in ("count", "store_true", "store_false"):
-        _do_action(ctx, spec, "")
-    elif action in ("store", "store_bool", "append"):
-        if not argv:
-            err = f"a value is required for {spec.long}, but none was supplied"
-            if spec.choices:
-                err += f"\n  [choices: {', '.join(spec.choices)}]"
-            raise ValueError(err)
-        _do_action(ctx, spec, argv.pop(0))
-    elif action == "extend":
-        vals = _pop_values(argv)
-        if not vals:
-            err = f"a value is required for {spec.long}, but none was supplied"
-            if spec.choices:
-                err += f"\n  [choices: {', '.join(spec.choices)}]"
-            raise ValueError(err)
-        _do_action(ctx, spec, vals)
+    match spec.action:
+        case "count" | "store_true" | "store_false":
+            _do_action(ctx, spec, "")
+        case "store" | "store_bool" | "append":
+            if not argv:
+                err = f"a value is required for {spec.long}, but none was supplied"
+                if spec.choices:
+                    err += f"\n  [choices: {', '.join(spec.choices)}]"
+                raise ValueError(err)
+            _do_action(ctx, spec, argv.pop(0))
+        case "extend":
+            vals = _pop_values(argv)
+            if not vals:
+                err = f"a value is required for {spec.long}, but none was supplied"
+                if spec.choices:
+                    err += f"\n  [choices: {', '.join(spec.choices)}]"
+                raise ValueError(err)
+            _do_action(ctx, spec, vals)
+        case _:  # pragma: no cover
+            assert_never(spec.action)
 
 
 def _parse(

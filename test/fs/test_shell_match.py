@@ -27,7 +27,7 @@ def test_star_star_at_start() -> None:
 def test_question_mark() -> None:
     assert shell_match("foo.py", "???.py") is True
     assert shell_match("fo.py", "???.py") is False
-    assert shell_match("fooo.py", "???.py") is False
+    assert shell_match("abcd.py", "???.py") is False
 
 
 def test_dotfiles() -> None:
