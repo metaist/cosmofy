@@ -110,8 +110,11 @@ scenarios, receipt signing is planned for a future release (see [#53]).
 ## Supported Python CLI
 
 Cosmopolitan Python apps have a special `.args` file which is read when it
-starts up. The contents of this file are typically set during `cosmofy bundle`
-and can be adjusted by `cosmofy fs args`. However, when using the [self-updater](#self-updater), we need to check for the `--self-update` option first.
+starts up. The contents of this file are typically set during
+[`cosmofy bundle`](#cosmofy-bundle) and can be adjusted with
+[`cosmofy fs args`](#cosmofy-fs-args).
+However, when using the [self-updater](#self-updater), we need to check for
+the `--self-update` option first.
 
 If `--self-update` is NOT present, we want to process the rest of the
 `.args` as usual. However, since Python has already started, we only support
