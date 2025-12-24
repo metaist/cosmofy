@@ -462,6 +462,9 @@ Arguments:
   <BUNDLE>                  Cosmopolitan file bundle
   <FILE>...                 one or more file patterns to show
 
+  tip: Use `--` to separate options from filenames that start with `-`
+  Example: cosmofy fs cat bundle.zip -- -weird-filename.txt
+
 Options:
   -p, --prompt              prompt for a decryption password
 
@@ -493,6 +496,9 @@ Usage: cosmofy fs add <BUNDLE> [OPTIONS] <FILE>...
 Arguments:
   <BUNDLE>                  Cosmopolitan file bundle
   <FILE>...                 files relative to current directory to add
+
+  tip: Use `--` to separate options from filenames that start with `-`
+  Example: cosmofy fs add bundle.zip -- -weird-filename.txt
 
 Options:
   -f, --force               overwrite existing files
@@ -528,6 +534,9 @@ Usage: cosmofy fs rm <BUNDLE> [OPTIONS] <FILE>...
 Arguments:
   <BUNDLE>                  Cosmopolitan file bundle
   <FILE>...                 files to remove
+
+  tip: Use `--` to separate options from filenames that start with `-`
+  Example: cosmofy fs rm bundle.zip -- -weird-filename.txt
 
 Options:
   -f, --force               ignore nonexistent files
