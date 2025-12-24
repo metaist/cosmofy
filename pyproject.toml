@@ -13,7 +13,7 @@ cosmofy = "cosmofy.__main__:cmd.main"
 
 [project]
 name = "cosmofy"
-version = "0.1.0"
+version = "0.2.0"
 
 authors = [{ name = "Metaist LLC", email = "metaist@metaist.com" }]
 description = "Cosmopolitan Python Bundler"
@@ -75,11 +75,9 @@ setup = "uv sync"
 build = ["uv build", "cosmo"]
 cosmo.help = "build portable executable (cosmopolitan)"
 cosmo.shell = """
-  uv run cosmofy src/cosmofy \
-    --output dist/cosmofy \
-    --args '-m cosmofy --cosmo' \
-    --release-url "https://github.com/metaist/cosmofy/releases/latest/download/cosmofy" \
-    $@
+  uv run -m cosmofy bundle $@;
+  uv run -m cosmofy fs args dist/cosmofy '-m cosmofy' $@;
+  uv run -m cosmofy updater add dist/cosmofy --no-args $@;
 """
 clean = """
   rm -rf .coverage;
@@ -171,6 +169,7 @@ recent-closed = ["recent | rg 'closes #'"]
 
 release.help = "commit & tag the release"
 release.shell = """
+  uv version $1;
   git commit -am "release: $1";
   git tag $1;
   git push;

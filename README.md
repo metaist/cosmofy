@@ -51,7 +51,7 @@ To bundle a project, first make sure you define `[project.scripts]` in your `pyp
 
 ```toml
 [project.scripts]
-my_command = "my_command:main"
+my_command = "my_command.__main__:main"
 ```
 
 The bundle the whole project:
@@ -93,7 +93,7 @@ This produces a `.json` receipt that you should publish together with your bundl
   date with the date at `--receipt-url` and will download any updates, if
   they exist.
 
-- Otherwise, the bundle will run as normal by calling `--args`.
+- Otherwise, the bundle will run as normal by calling `.args`.
   [See below](#supported-python-cli) for minor limitations.
 
 ## Security Considerations
@@ -108,12 +108,11 @@ scenarios, receipt signing is planned for a future release (see [#53]).
 ## Supported Python CLI
 
 Cosmopolitan Python apps have a special `.args` file which is read when it
-starts up. The contents of this file are typically set by the `--args` option.
-However, when using the [self-updater](#self-updater), we need to check for
-the `--self-update` option first.
+starts up. The contents of this file are typically set during `cosmofy bundle`
+and can be adjusted by `cosmofy fs args`. However, when using the [self-updater](#self-updater), we need to check for the `--self-update` option first.
 
 If `--self-update` is NOT present, we want to process the rest of the
-`--args` as usual. However, since Python has already started, we only support
+`.args` as usual. However, since Python has already started, we only support
 the following [Python Command Line Interface options](https://docs.python.org/3/using/cmdline.html):
 
 - `-c <command>`: run a command
