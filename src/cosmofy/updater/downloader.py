@@ -14,6 +14,7 @@ from urllib.request import urlopen
 import hashlib
 import logging
 import os
+import platform
 import stat
 import tempfile
 
@@ -39,13 +40,30 @@ def move_executable(src: Path, dest: Path) -> Path:
     """Set the executable bit and move a file."""
     mode = src.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
     src.chmod(mode)
-
     dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(dest.suffix + ".tmp")
-    os.replace(tmp, dest)
 
+    if platform.system() == "Windows":  # can't overwrite running executable
+        old = dest.with_suffix(dest.suffix + ".old")
+        if old.exists():  # from previous update
+            old.unlink()
+        if dest.exists():  # rename running exe
+            os.rename(dest, old)
+        # Note: .old file will be cleaned up on next update
+
+    os.replace(src, dest)  # atomic move
     log.debug(f"move: {src} to {dest}")
     return dest
+
+
+def cleanup_old_executable(path: Path) -> None:
+    """Remove leftover .old file from previous Windows update."""
+    old = path.with_suffix(path.suffix + ".old")
+    if old.exists():
+        try:
+            old.unlink()
+            log.debug(f"Cleaned up old executable: {old}")
+        except OSError:
+            pass  # Still in use or permission denied, ignore
 
 
 def progress(response: HTTPResponse, prefix: str = "Downloading: ") -> Iterator[bytes]:

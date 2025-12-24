@@ -16,6 +16,7 @@ from cosmofy import __version__
 from .add import RECEIPT_URL
 from .add import RELEASE_URL
 from .check import check
+from .downloader import cleanup_old_executable
 from .downloader import download_release
 from .pythonoid import run_python
 
@@ -63,6 +64,8 @@ def self_update(path: Path) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     """Main entry point for self-updater."""
+    cleanup_old_executable(Path(sys.executable))
+
     args = argv or sys.argv[1:]
     if "--self-update" in args:
         if "-h" in args or "--help" in args:
