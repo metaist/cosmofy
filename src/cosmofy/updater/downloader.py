@@ -8,6 +8,7 @@ from http.client import HTTPResponse
 from pathlib import Path
 from typing import Iterator
 from urllib.error import HTTPError
+from urllib.parse import urlparse
 from urllib.request import Request
 from urllib.request import urlopen
 import hashlib
@@ -24,6 +25,14 @@ log = logging.getLogger(__name__)
 
 CHUNK_SIZE = 65536
 """Default chunk size."""
+
+
+def validate_url(url: str, allow_http: bool = False) -> None:
+    """Validate URL scheme is https (or http if explicitly allowed)."""
+    parsed = urlparse(url)
+    allowed = ("https",) if not allow_http else ("https", "http")
+    if parsed.scheme not in allowed:
+        raise ValueError(f"URL must use HTTPS, got: {parsed.scheme}://")
 
 
 def move_executable(src: Path, dest: Path) -> Path:
@@ -57,6 +66,7 @@ def progress(response: HTTPResponse, prefix: str = "Downloading: ") -> Iterator[
 
 def download(url: str, path: Path, timeout: int = COSMOFY_TIMEOUT) -> Path:
     """Download `url` to path."""
+    validate_url(url)
     log.info(f"download: {url} to {path}")
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -98,6 +108,7 @@ def download_and_hash(
     url: str, path: Path, algo: str = DEFAULT_HASH, timeout: int = COSMOFY_TIMEOUT
 ) -> str:
     """Download `url` to `path` and return the hash."""
+    validate_url(url)
     log.info(f"download: {url} to {path}")
     digest = hashlib.new(algo)
 
