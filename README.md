@@ -69,11 +69,13 @@ uvx cosmofy bundle --script myscript.py # produces `dist/myscript`
 
 ## Limitations
 
+- Currently, we can only bundle pure-Python code (no C extensions) (see [#94])
 - Currently, we're tied to the latest Cosmopolitan Python version (see [#44]).
 - Automatically compiling Python bytecode is currently disabled (see [#41]).
 
 [#44]: https://github.com/metaist/cosmofy/issues/44
 [#41]: https://github.com/metaist/cosmofy/issues/41
+[#94]: https://github.com/metaist/cosmofy/issues/94
 
 ## Self Updater
 
