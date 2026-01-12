@@ -259,6 +259,8 @@ class Bundler:
 
         if script:
             args.extend(["--script", str(script)])
+            if venv:
+                args.append("--active")  # use VIRTUAL_ENV
         else:
             args.extend(["--no-default-groups", "--reinstall-package", pkg])
 
@@ -275,7 +277,6 @@ class Bundler:
             data = json.loads(out)
             log.debug(data)
 
-            # NOTE: `uv sync --script` doesn't respect environment variables.
             venv = Path(data.get("sync", {}).get("environment", {}).get("path", ""))
         else:  # dummy value
             venv = Path()
