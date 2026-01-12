@@ -45,7 +45,7 @@ class Args(CommonArgs):
     __doc__ = usage
     file: list[str] = arg(list, positional=True, required=True, action="extend")
     force: bool = arg(False, short="-f")
-    recursive: bool = arg(False, short="-r")  # TODO: support -R
+    recursive: bool = arg(False, short="-r", aliases=["-R"])
 
 
 def remove_path(
