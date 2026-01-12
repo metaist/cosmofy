@@ -15,6 +15,7 @@ from .baton import ColorFormatter
 from .baton import ColorHandler
 from .baton import Command
 from .bundle import cmd as bundle
+from .completions import cmd as completions
 from .fs.__main__ import cmd as fs
 from .self.__main__ import cmd as self
 from .self.version import print_version
@@ -33,6 +34,7 @@ Commands:
   updater                   install/uninstall bundle self-updater
   fs                        inspect and modify an existing bundle
   self                      manage the `cosmofy` executable
+  completions               generate shell completions
 
 Options:
       --version             display the program version and exit
@@ -75,6 +77,7 @@ cmd = Command(
     usage,
     {
         "bundle": bundle,
+        "completions": completions,
         "updater": updater,
         "fs": fs,
         "self": self,
