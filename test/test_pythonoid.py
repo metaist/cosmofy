@@ -3,6 +3,7 @@
 # std
 from pathlib import Path
 from shlex import split
+from unittest.mock import MagicMock
 from unittest.mock import patch
 
 # lib
@@ -10,6 +11,7 @@ import pytest
 
 # pkg
 from cosmofy.updater import pythonoid
+from cosmofy.updater.pythonoid import compile_python_external
 from cosmofy.updater.pythonoid import PythonArgs
 from cosmofy.updater.pythonoid import run_python
 
@@ -34,6 +36,27 @@ def test_compile() -> None:
     src = Path(__file__).parent.parent / "src" / "cosmofy" / "__init__.py"
     assert isinstance(pythonoid.compile_python(src), bytearray)
     assert isinstance(pythonoid.compile_python(src, src.read_bytes()), bytearray)
+
+
+@patch("cosmofy.updater.pythonoid.subprocess.run")
+def test_compile_external(mock_run: MagicMock) -> None:
+    """Compile python using external interpreter."""
+    mock_run.return_value.stdout = b"\x00\x01\x02\x03"  # fake .pyc bytes
+
+    result = compile_python_external(
+        python=Path("/usr/bin/python3"),
+        source=b"print('hello')",
+        dest="Lib/hello.pyc",
+    )
+
+    assert result == b"\x00\x01\x02\x03"
+    mock_run.assert_called_once()
+    call_args = mock_run.call_args
+    assert call_args.kwargs["input"] == b"print('hello')"
+    assert call_args.kwargs["capture_output"] is True
+    assert call_args.kwargs["check"] is True
+    # Check the command includes the dest path
+    assert "Lib/hello.pyc" in call_args.args[0]
 
 
 def test_parse() -> None:

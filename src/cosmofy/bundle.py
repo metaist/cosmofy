@@ -80,6 +80,7 @@ Output options:
                             [default: project-root/dist]
   -s, --suffix <SUFFIX>     file extension for output executables
                             [default: '.com' on Windows, '' otherwise]
+  -c, --compile-bytecode    compile .py files to .pyc using Cosmopolitan Python
 
 Cache options:
   -n, --no-cache            do not read or save to the cache
@@ -104,6 +105,7 @@ class Args(GlobalArgs):
     # output
     output_dir: Path | None = arg(None)
     suffix: str | None = arg(None, short="-s")
+    compile_bytecode: bool = arg(False, short="-c")
 
     # cache
     no_cache: bool = arg(False, short="-n", env="COSMOFY_NO_CACHE")
@@ -169,6 +171,7 @@ class Bundler:
     args: Args
     banner: str
     suffix: str
+    cosmo_python: Path | None
 
     bundle: ZipFile2
 
@@ -176,6 +179,7 @@ class Bundler:
         """Construct a bundler."""
         self.args = args
         self.banner = args.banner
+        self.cosmo_python = None
         if args.suffix is None:
             self.suffix = ".com" if platform.system() == "Windows" else ""
         else:
@@ -296,7 +300,14 @@ class Bundler:
                 src = Path(dirname) / f
                 rel = src.relative_to(pkgs)
                 dest = "/".join(("Lib",) + rel.parts)
-                add_path(bundle, src, dest, dry_run=self.args.dry_run)
+                add_path(
+                    bundle,
+                    src,
+                    dest,
+                    compile_bytecode=self.args.compile_bytecode,
+                    python=self.cosmo_python,
+                    dry_run=self.args.dry_run,
+                )
         return bundle
 
     def bundle_entry_point(
@@ -381,8 +392,18 @@ class Bundler:
                     pkg=script.name, version=version, venv=venv, script=script
                 ),
             )
-            add_path(bundle, script, script.name, dry_run=self.args.dry_run)
-            set_args(bundle, script.name, dry_run=self.args.dry_run)
+            script_dest = script.name
+            if self.args.compile_bytecode:
+                script_dest = script.stem + ".pyc"
+            add_path(
+                bundle,
+                script,
+                script_dest,
+                compile_bytecode=self.args.compile_bytecode,
+                python=self.cosmo_python,
+                dry_run=self.args.dry_run,
+            )
+            set_args(bundle, script_dest, dry_run=self.args.dry_run)
 
         log.info(f"bundled: {dest}")
         return script
@@ -391,9 +412,10 @@ class Bundler:
         """Build a venv and bundle it into a Cosmopolitan Python executable."""
         with tempfile.TemporaryDirectory(prefix="cosmofy-python-") as cosmo_temp:
             log.debug(f"temp dir={cosmo_temp}")
-            cosmo_python = self.get_cosmo_python(
+            self.cosmo_python = self.get_cosmo_python(
                 Path(cosmo_temp) / ("python" + self.suffix)
             )
+            cosmo_python = self.cosmo_python  # local alias for readability
             version = get_version(cosmo_python)
             if not version:
                 raise ValueError("could not get Cosmopolitan Python version")

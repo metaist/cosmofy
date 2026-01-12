@@ -15,6 +15,7 @@ from cosmofy.args import get_banner
 from cosmofy.args import global_options
 from cosmofy.baton import arg
 from cosmofy.baton import Command
+from cosmofy.updater.pythonoid import compile_python_external
 from cosmofy.zipfile2 import ZipFile2
 
 from .rm import remove_path
@@ -39,6 +40,7 @@ Options:
       --chdir <PATH>        change to this directory before adding
       --dest                prefix to add in the bundle
                             Most python packages go into `Lib/site-packages`
+  -c, --compile-bytecode    compile .py files to .pyc using the bundle's Python
 
 {global_options}
 """
@@ -51,7 +53,7 @@ class Args(CommonArgs):
     chdir: Path | None = arg(None)
     dest: str = arg("")
     force: bool = arg(False, short="-f")
-    # compile_bytecode: bool = arg(False)
+    compile_bytecode: bool = arg(False, short="-c")
 
 
 def sanitize_zip_path(dest: str) -> str:
@@ -118,6 +120,8 @@ def add_path(
     dest: str,
     *,
     force: bool = False,
+    compile_bytecode: bool = False,
+    python: Path | None = None,
     # global
     dry_run: bool = False,
     level: int = logging.INFO,
@@ -137,9 +141,12 @@ def add_path(
         raise FileNotFoundError(f"{banner}cannot find file: {src.resolve()}")
 
     if src.is_file():
-        add_data(
-            bundle, src.read_bytes(), dest, force=force, dry_run=dry_run, level=level
-        )
+        data: bytes | bytearray = src.read_bytes()
+        if compile_bytecode and python and dest.endswith(".py"):
+            dest = dest[:-3] + ".pyc"  # change extension
+            if not dry_run:
+                data = compile_python_external(python, data, dest)
+        add_data(bundle, data, dest, force=force, dry_run=dry_run, level=level)
     elif src.is_dir():
         for item in src.iterdir():
             add_path(
@@ -147,13 +154,15 @@ def add_path(
                 item,
                 dest + f"/{item.name}",
                 force=force,
+                compile_bytecode=compile_bytecode,
+                python=python,
                 dry_run=dry_run,
                 level=level,
                 _seen=_seen,
             )
 
 
-def add_files(bundle: ZipFile2, args: Args) -> None:
+def add_files(bundle: ZipFile2, args: Args, python: Path | None = None) -> None:
     """Add files to the bundle."""
     original = Path.cwd()
     if args.chdir:
@@ -170,7 +179,15 @@ def add_files(bundle: ZipFile2, args: Args) -> None:
             except ValueError:
                 # Path is not under root, use as-is
                 dest = args.dest + name if args.dest else name
-            add_path(bundle, Path(name), dest, force=args.force, dry_run=args.dry_run)
+            add_path(
+                bundle,
+                Path(name),
+                dest,
+                force=args.force,
+                compile_bytecode=args.compile_bytecode,
+                python=python,
+                dry_run=args.dry_run,
+            )
     finally:
         if args.chdir:
             log.debug(f"change directory: {original}")
@@ -190,7 +207,9 @@ def run(args: Args) -> int:
 
         # good to go
         with ZipFile2(args.bundle, mode="a") as bundle:
-            add_files(bundle, args)
+            # The bundle itself is a Cosmopolitan Python, use it to compile
+            python = args.bundle if args.compile_bytecode else None
+            add_files(bundle, args, python=python)
     except Exception as e:
         args.show_error(log, e)
         return 2

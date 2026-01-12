@@ -13,6 +13,8 @@ import logging
 import marshal
 import re
 import runpy
+import shlex
+import subprocess
 import sys
 import traceback
 
@@ -96,6 +98,41 @@ def compile_python(path: Path, source: bytes | None = None) -> bytearray:
     data.extend(_pack_uint32(source_size))
     data.extend(marshal.dumps(code))
     return data
+
+
+# Python script to compile source and output .pyc bytes
+COMPILE_SCRIPT = """\
+import marshal,sys
+from importlib.util import MAGIC_NUMBER
+s=sys.stdin.buffer.read()
+c=compile(s,sys.argv[1],'exec')
+sys.stdout.buffer.write(MAGIC_NUMBER)
+sys.stdout.buffer.write((0).to_bytes(4,'little'))
+sys.stdout.buffer.write((0).to_bytes(4,'little'))
+sys.stdout.buffer.write(len(s).to_bytes(4,'little'))
+sys.stdout.buffer.write(marshal.dumps(c))
+"""
+
+
+def compile_python_external(
+    python: Path,
+    source: bytes | bytearray,
+    dest: str,
+) -> bytes:
+    """Compile Python source using an external interpreter.
+
+    Args:
+        python: Path to Python interpreter (e.g., Cosmopolitan Python).
+        source: Python source code bytes.
+        dest: Filename to embed in bytecode (anonymized path).
+
+    Returns:
+        Compiled .pyc bytes.
+    """
+    cmd = [str(python), "-c", COMPILE_SCRIPT, dest]
+    log.debug(f"compile: {shlex.join(cmd)}")
+    result = subprocess.run(cmd, input=source, capture_output=True, check=True)
+    return result.stdout
 
 
 # https://github.com/python/cpython/blob/32119fc377a4d9df524a7bac02b6922a990361dd/Python/initconfig.c#L233
