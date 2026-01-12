@@ -47,12 +47,14 @@ Action = Literal[
 
 
 @dataclass
-class ArgMetadata:
-    short: str = ""
-    action: Action = ""  # infer, by default
-    required: bool = False
-    positional: bool = False
-    env: str = ""
+class ArgPartial:
+    """User-specified argument configuration (before full resolution)."""
+
+    short: str
+    action: Action
+    required: bool
+    positional: bool
+    env: str
 
 
 def arg(
@@ -70,7 +72,7 @@ def arg(
         raise ValueError("optional arguments cannot be required")
 
     metadata = kwargs.pop("metadata", {})
-    metadata["arg"] = ArgMetadata(
+    metadata["arg"] = ArgPartial(
         short=short,
         action=action,
         required=required,
@@ -115,17 +117,14 @@ def infer_action(kind: type, positional: bool = False) -> Action:
 
 
 @dataclass
-class Arg:
+class Arg(ArgPartial):
+    """Fully-resolved argument (after processing the class)."""
+
     long: str
-    short: str
     field_name: str
     field_type: type
     item_type: type  # for containers, otherwise same as field_type
     choices: list[Any]
-    action: Action
-    required: bool
-    positional: bool
-    env: str
 
     @staticmethod
     def from_class(spec: type) -> list[Arg]:
@@ -143,7 +142,7 @@ class Arg:
             item_type = get_item_type(kind)
             choices = []
 
-        meta: ArgMetadata | None = f.metadata.get("arg")
+        meta: ArgPartial | None = f.metadata.get("arg")
         if meta is not None:
             action = meta.action or infer_action(kind, meta.positional)
             short = meta.short

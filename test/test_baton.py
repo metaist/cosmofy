@@ -19,7 +19,11 @@ from cosmofy.baton import Command
 
 def test_arg_basic() -> None:
     have = baton.arg("").metadata
-    want = {"arg": baton.ArgMetadata()}
+    want = {
+        "arg": baton.ArgPartial(
+            short="", action="", required=False, positional=False, env=""
+        )
+    }
     assert have == want
 
     with pytest.raises(ValueError, match="cannot be required"):
