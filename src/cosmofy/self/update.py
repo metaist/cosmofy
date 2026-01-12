@@ -49,5 +49,5 @@ def run(args: Args) -> int:
 
 cmd = Command("cosmofy.self.update", Args, run)
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(cmd.main())

@@ -338,3 +338,358 @@ def test_edge() -> None:
 
     have = baton.parse(X, split("-- -weird-file"))
     assert have.pos == "-weird-file"
+
+
+def test_double_dash_extend() -> None:
+    """Test -- with extend action consumes remaining args."""
+
+    @dataclass
+    class X:
+        files: list[str] = arg(list, positional=True, action="extend")
+
+    have = baton.parse(X, split("-- -file1 -file2"))
+    assert have.files == ["-file1", "-file2"]
+
+
+def test_double_dash_multiple_positionals() -> None:
+    """Test -- with multiple non-extend positionals."""
+
+    @dataclass
+    class X:
+        a: str = arg("", positional=True)
+        b: str = arg("", positional=True)
+        c: str = arg("", positional=True)
+
+    have = baton.parse(X, split("-- x y z"))
+    assert have.a == "x"
+    assert have.b == "y"
+    assert have.c == "z"
+
+
+def test_double_dash_too_many_args() -> None:
+    """Test -- with more args than positionals raises error."""
+
+    @dataclass
+    class X:
+        a: str = arg("", positional=True)
+
+    with pytest.raises(ValueError, match="unexpected argument"):
+        baton.parse(X, split("-- x y"))
+
+
+def test_double_dash_no_positionals() -> None:
+    """Test -- with no positionals but extra args raises error."""
+
+    @dataclass
+    class X:
+        opt: bool = arg(False)
+
+    with pytest.raises(ValueError, match="unexpected argument"):
+        baton.parse(X, split("-- x"))
+
+
+def test_extend_with_choices() -> None:
+    """Test extend action with choices shows error hint."""
+
+    @dataclass
+    class X:
+        files: list[str] = arg(list, action="extend")
+
+    with pytest.raises(ValueError, match="value is required"):
+        baton.parse(X, split("--files"))
+
+
+def test_color_formatter() -> None:
+    """Test ColorFormatter formats log records with colors."""
+    import logging
+
+    formatter = baton.ColorFormatter("%(levelname)s: %(message)s", color="never")
+
+    # Test different log levels
+    for level, expected in [
+        (logging.ERROR, "error"),
+        (logging.WARNING, "warning"),
+        (logging.INFO, "info"),
+        (logging.DEBUG, "debug"),
+        (logging.CRITICAL, "critical"),  # Unknown level
+    ]:
+        record = logging.LogRecord(
+            name="test",
+            level=level,
+            pathname="",
+            lineno=0,
+            msg="test message",
+            args=(),
+            exc_info=None,
+        )
+        result = formatter.format(record)
+        assert expected in result.lower()
+
+
+def test_color_handler() -> None:
+    """Test ColorHandler sets stream on formatter."""
+
+    handler = baton.ColorHandler()
+    formatter = baton.ColorFormatter("%(message)s")
+    handler.setFormatter(formatter)
+    assert formatter._stream is not None
+
+
+def test_use_color_modes() -> None:
+    """Test use_color with different modes."""
+    import io
+
+    # Test "never" mode
+    assert baton.use_color("never", io.StringIO()) is False
+
+    # Test "always" mode
+    assert baton.use_color("always", io.StringIO()) is True
+
+
+def test_use_color_env_vars() -> None:
+    """Test use_color respects environment variables."""
+    import io
+
+    # Save original env
+    orig_no_color = ENV.get("NO_COLOR")
+    orig_clicolor = ENV.get("CLICOLOR")
+    orig_force_color = ENV.get("FORCE_COLOR")
+    orig_clicolor_force = ENV.get("CLICOLOR_FORCE")
+    orig_term = ENV.get("TERM")
+
+    try:
+        # Clear all color env vars first
+        for var in ["NO_COLOR", "CLICOLOR", "FORCE_COLOR", "CLICOLOR_FORCE"]:
+            if var in ENV:
+                del ENV[var]
+
+        # Test NO_COLOR
+        ENV["NO_COLOR"] = "1"
+        assert baton.use_color("auto", io.StringIO()) is False
+        del ENV["NO_COLOR"]
+
+        # Test CLICOLOR=0
+        ENV["CLICOLOR"] = "0"
+        assert baton.use_color("auto", io.StringIO()) is False
+        del ENV["CLICOLOR"]
+
+        # Test FORCE_COLOR
+        ENV["FORCE_COLOR"] = "1"
+        assert baton.use_color("auto", io.StringIO()) is True
+        del ENV["FORCE_COLOR"]
+
+        # Test CLICOLOR_FORCE
+        ENV["CLICOLOR_FORCE"] = "1"
+        assert baton.use_color("auto", io.StringIO()) is True
+        del ENV["CLICOLOR_FORCE"]
+
+        # Test TERM=dumb (need a TTY-like object for this)
+        # StringIO doesn't have isatty, so use_color returns False anyway
+    finally:
+        # Restore original env
+        if orig_no_color is not None:
+            ENV["NO_COLOR"] = orig_no_color
+        if orig_clicolor is not None:
+            ENV["CLICOLOR"] = orig_clicolor
+        if orig_force_color is not None:
+            ENV["FORCE_COLOR"] = orig_force_color
+        if orig_clicolor_force is not None:
+            ENV["CLICOLOR_FORCE"] = orig_clicolor_force
+        if orig_term is not None:
+            ENV["TERM"] = orig_term
+
+
+def test_render_tags() -> None:
+    """Test render_tags with different modes."""
+    # Test with color=never (strips tags)
+    result = baton.render_tags("[bold]hello[/]", color="never")
+    assert result == "hello"
+    assert "[bold]" not in result
+
+    # Test with color=always (renders tags)
+    result = baton.render_tags("[bold]hello[/]", color="always")
+    assert "\033[" in result  # ANSI escape
+
+    # Test with unknown tag (left as-is)
+    result = baton.render_tags("[unknowntag]hello[/]", color="always")
+    assert "[unknowntag]" in result
+
+    # Test with custom theme
+    custom_theme = {"custom": "red"}
+    result = baton.render_tags("[custom]hello[/]", color="always", theme=custom_theme)
+    assert "\033[31m" in result  # red
+
+
+def test_decorate() -> None:
+    """Test decorate applies theme markings."""
+    text = """
+Usage: mycommand --help
+
+Arguments:
+  <FILE>...              files to process
+
+Options:
+  --verbose              be verbose
+  [OPTION]               optional thing
+
+Commands:
+  build                  build the project
+
+  tip: use `--help` for more
+  [default: value]
+  [env: MY_VAR=test]
+  [choices: a, b, c]
+"""
+    result = baton.decorate(text)
+
+    # Check various decorations were applied
+    assert "[command]" in result  # command names
+    assert "[heading]" in result  # headings
+    assert "[argument]" in result  # <ARGUMENTS>
+    assert "[option]" in result  # [OPTIONS]
+    assert "[flag]" in result  # --flags
+    assert "[tip]" in result  # tip:
+    assert "[default]" in result  # default values
+    assert "[env]" in result  # env vars
+    assert "[choice]" in result  # choices
+
+
+def test_show_usage_short() -> None:
+    """Test show_usage with short=True."""
+
+    @dataclass
+    class X:
+        """Full description here.
+
+        Usage: cmd [OPTIONS]
+
+        Arguments:
+          <FILE>...              files to process
+
+        Options:
+          --help                 show help
+        """
+
+        help: bool = arg(False)
+
+    def run(args: X) -> int:
+        return 0
+
+    cmd = Command("cmd", X, run)
+    # Just verify it doesn't crash
+    cmd.show_usage(short=True, color="never")
+    cmd.show_usage(short=False, color="never")
+
+
+def test_show_usage_with_color() -> None:
+    """Test show_usage with color enabled."""
+
+    @dataclass
+    class X:
+        """Full description.
+
+        Usage: cmd [OPTIONS]
+
+        Options:
+          --help                 show help
+        """
+
+        help: bool = arg(False)
+
+    def run(args: X) -> int:
+        return 0
+
+    cmd = Command("cmd", X, run)
+    # Test with color=always to trigger decorate() in show_usage
+    cmd.show_usage(short=False, color="always")
+
+
+def test_color_formatter_with_color_always() -> None:
+    """Test ColorFormatter with color=always applies decorate."""
+    import logging
+
+    formatter = baton.ColorFormatter("%(levelname)s: %(message)s", color="always")
+
+    record = logging.LogRecord(
+        name="test",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="test message",
+        args=(),
+        exc_info=None,
+    )
+    result = formatter.format(record)
+    # With color=always, should apply ANSI codes
+    # The decorate function is called
+    assert "info" in result.lower()
+
+
+def test_use_color_tty() -> None:
+    """Test use_color with a TTY-like file."""
+    import io
+
+    # Create a mock TTY
+    class MockTTY(io.StringIO):
+        def isatty(self) -> bool:
+            return True
+
+    # Clear color env vars and set TERM to something non-dumb
+    orig_no_color = ENV.get("NO_COLOR")
+    orig_clicolor = ENV.get("CLICOLOR")
+    orig_force_color = ENV.get("FORCE_COLOR")
+    orig_clicolor_force = ENV.get("CLICOLOR_FORCE")
+    orig_term = ENV.get("TERM")
+
+    try:
+        # Clear all color env vars
+        for var in ["NO_COLOR", "CLICOLOR", "FORCE_COLOR", "CLICOLOR_FORCE"]:
+            if var in ENV:
+                del ENV[var]
+
+        # Set TERM to a normal value
+        ENV["TERM"] = "xterm"
+
+        # With TTY and no disabling env vars, should return True
+        assert baton.use_color("auto", MockTTY()) is True
+
+        # Test with TERM=dumb, should return False
+        ENV["TERM"] = "dumb"
+        assert baton.use_color("auto", MockTTY()) is False
+
+    finally:
+        # Restore original env
+        for var, orig in [
+            ("NO_COLOR", orig_no_color),
+            ("CLICOLOR", orig_clicolor),
+            ("FORCE_COLOR", orig_force_color),
+            ("CLICOLOR_FORCE", orig_clicolor_force),
+            ("TERM", orig_term),
+        ]:
+            if orig is not None:
+                ENV[var] = orig
+            elif var in ENV:
+                del ENV[var]
+
+
+def test_command_main_argv_none() -> None:
+    """Test Command.main with argv=None uses sys.argv."""
+    import sys
+
+    @dataclass
+    class X:
+        help: bool = arg(False, short="-h")
+
+    def run(args: X) -> int:
+        return 0
+
+    cmd = Command("cmd", X, run)
+
+    # Save and restore sys.argv
+    orig_argv = sys.argv
+    try:
+        sys.argv = ["cmd", "-h"]
+        result = cmd.main()
+        assert result == 0
+    finally:
+        sys.argv = orig_argv

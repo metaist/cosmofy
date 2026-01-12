@@ -143,3 +143,22 @@ def test_from_path(
 
     _check_output.return_value = "no version information"
     assert Receipt.from_path(Path("fake")) == Receipt(hash=fake_hash, version="")
+
+
+@patch("cosmofy.updater.receipt.Path.is_file")
+@patch("cosmofy.updater.receipt.subprocess.check_output")
+def test_get_version_called_process_error(
+    _check_output: MagicMock,
+    _is_file: MagicMock,
+) -> None:
+    """Test get_version when subprocess raises CalledProcessError."""
+    import subprocess
+
+    from cosmofy.updater.receipt import get_version
+
+    _is_file.return_value = True
+    _check_output.side_effect = subprocess.CalledProcessError(1, "cmd")
+
+    # Should return default when CalledProcessError is raised
+    result = get_version(Path("fake"), "0.0.0")
+    assert result == "0.0.0"

@@ -80,7 +80,7 @@ def remove_path(
         for item in path.iterdir():
             remove_path(
                 bundle,
-                item.at,  # type: ignore
+                item.at,  # type: ignore[attr-defined]
                 force=force,
                 recursive=recursive,
                 dry_run=dry_run,
@@ -117,5 +117,5 @@ def run(args: Args) -> int:
 
 cmd = Command("cosmofy.fs.rm", Args, run)
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(cmd.main())

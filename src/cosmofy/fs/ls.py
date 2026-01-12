@@ -116,7 +116,7 @@ def human_size(n: float, si: bool = False) -> str:
             s = f"{n:.1f}".rstrip("0").rstrip(".")
             return f"{s}{u}"
         n /= chunk
-    return ""
+    return ""  # pragma: no cover
 
 
 def ls_time(dt: datetime, *, now: datetime | None = None) -> str:
@@ -272,5 +272,5 @@ def run(args: Args) -> int:
 
 cmd = Command("cosmofy.fs.ls", Args, run)
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(cmd.main())

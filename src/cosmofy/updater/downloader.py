@@ -46,8 +46,8 @@ def move_executable(src: Path, dest: Path) -> Path:
     if dest == Path(sys.executable) and platform.system() == "Windows":
         # can't overwrite running executable
         old = dest.with_suffix(dest.suffix + ".old")
-        if old.exists():  # from previous update
-            old.unlink()
+        if old.exists():  # from previous update  # pragma: no cover
+            old.unlink()  # pragma: no cover
         if dest.exists():  # rename running exe
             os.rename(dest, old)
         # Note: .old file will be cleaned up on next update

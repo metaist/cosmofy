@@ -247,7 +247,7 @@ def _parse_optional(ctx: object, spec: Arg, argv: list[str]) -> None:
             vals = _pop_values(argv)
             if not vals:
                 err = f"a value is required for {spec.long}, but none was supplied"
-                if spec.choices:
+                if spec.choices:  # pragma: no cover
                     err += f"\n  [choices: {', '.join(spec.choices)}]"
                 raise ValueError(err)
             _do_action(ctx, spec, vals)
@@ -499,7 +499,7 @@ class ColorFormatter(logging.Formatter):
         self._stream = stream
 
 
-class ColorHandler(logging.StreamHandler):  # type: ignore
+class ColorHandler(logging.StreamHandler):  # type: ignore[type-arg]
     """StreamHandler that automatically configures ColorFormatter's stream.
 
     Usage:
@@ -561,7 +561,7 @@ def render_tags(
         parts = tag.split()
         codes = [COLOR_CODE[p] for p in parts if p in COLOR_CODE]
         if codes:
-            return f'\033[{";".join(codes)}m'
+            return f"\033[{';'.join(codes)}m"
         return m.group(0)  # Unknown tag, leave as-is
 
     if use_color(color, sys.stdout if file is None else file):

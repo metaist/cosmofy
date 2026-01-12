@@ -22,6 +22,21 @@ def test_add_file() -> None:
     assert file.read("/test.txt") == data
 
 
+def test_add_file_with_date() -> None:
+    """Add a file with explicit date."""
+    from datetime import datetime
+
+    file = ZipFile2(io.BytesIO(), "a")
+
+    data = b"hello world"
+    specific_date = datetime(2020, 6, 15, 12, 30, 45)
+    file.add_file("/test.txt", data, date=specific_date)
+    assert file.read("/test.txt") == data
+    # Verify the date was used
+    info = file.getinfo("/test.txt")
+    assert info.date_time[:6] == (2020, 6, 15, 12, 30, 45)
+
+
 def test_errors() -> None:
     """Run time errors."""
     file = ZipFile2(io.BytesIO(), "a")  # to keep from `BadZipFile`

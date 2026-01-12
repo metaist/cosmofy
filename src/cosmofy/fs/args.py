@@ -84,5 +84,5 @@ def run(args: Args) -> int:
 
 cmd = Command("cosmofy.fs.args", Args, run)
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(cmd.main())

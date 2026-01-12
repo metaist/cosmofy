@@ -148,7 +148,7 @@ def copy_data(
         add_data(
             dest,
             src.read_bytes(),
-            src.at,  # type: ignore
+            src.at,  # type: ignore[attr-defined]
             force=True,
             dry_run=dry_run,
             level=level,
@@ -221,9 +221,9 @@ def copy_cosmofy(bundle: ZipFile2, *, dry_run: bool = False) -> None:
         else:
             raise FileNotFoundError(f"could not location {dist_info_name}")
 
-    if is_zipfile(sys.executable):
-        log.debug("inside cosmo python")
-        from_cosmo(bundle, src_path, meta_path, dry_run=dry_run)
+    if is_zipfile(sys.executable):  # pragma: no cover
+        log.debug("inside cosmo python")  # pragma: no cover
+        from_cosmo(bundle, src_path, meta_path, dry_run=dry_run)  # pragma: no cover
     else:
         log.debug("inside python venv")
         from_venv(bundle, src_path, meta_path, dry_run=dry_run)
@@ -346,5 +346,5 @@ def run(args: Args) -> int:
 
 cmd = Command("cosmofy.updater.add", Args, run)
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(cmd.main())
