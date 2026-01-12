@@ -52,7 +52,7 @@ def setup_logger() -> None:
 
 @dataclass
 class Args(GlobalArgs):
-    command: str = arg("", positional=True)  # optional so we can show usage
+    command: str = arg("", subcommand=True)  # optional so we can show usage
     version: bool = arg(False)
 
 

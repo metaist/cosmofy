@@ -21,7 +21,12 @@ def test_arg_basic() -> None:
     have = baton.arg("").metadata
     want = {
         "arg": baton.ArgPartial(
-            aliases=[], action="", required=False, positional=False, env=""
+            aliases=[],
+            action="",
+            required=False,
+            positional=False,
+            subcommand=False,
+            env="",
         )
     }
     assert have == want
@@ -271,7 +276,7 @@ def test_subcommands() -> None:
     class Parent(Common):
         """Usage: parent [--verbose] <command>"""
 
-        command: str = arg(default="", positional=True, required=True)
+        command: str = arg(default="", subcommand=True, required=True)
 
     @dataclass
     class Child(Common):
@@ -305,6 +310,43 @@ def test_subcommands() -> None:
 
     scenario = 2
     assert parent.main(split("unknown")) == 1, "unknown subcommand errors"
+
+
+def test_subcommand_positional_before_command() -> None:
+    """Test that a positional before 'command' doesn't trigger early handoff."""
+
+    @dataclass
+    class Parent:
+        file: str = arg(default="", positional=True)  # positional BEFORE command
+        command: str = arg(default="", subcommand=True)
+
+    @dataclass
+    class Child:
+        file: str = ""  # inherited from parent via _init_context
+
+    results: dict[str, object] = {}
+
+    def run_parent(args: Parent) -> int:
+        results["parent_ran"] = True
+        return 0
+
+    def run_child(args: Child) -> int:
+        results["child_ran"] = True
+        results["file"] = args.file  # check inherited value
+        return 0
+
+    child = Command("child", Child, run_child)
+    parent = Command("parent", Parent, run_parent, subcommands={"child": child})
+
+    # Pass "child" as the file argument, then "child" as the command
+    # If early handoff happens, file would be empty or wrong
+    results.clear()
+    parent.main(split("child child"))
+    assert results.get("parent_ran") is None, "parent run should NOT be called"
+    assert results.get("child_ran") is True, "child subcommand should have run"
+    assert results.get("file") == "child", (
+        f"file should be 'child', got {results.get('file')}"
+    )
 
 
 def test_env() -> None:

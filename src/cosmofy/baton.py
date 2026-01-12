@@ -54,6 +54,7 @@ class ArgPartial:
     action: Action
     required: bool
     positional: bool
+    subcommand: bool
     env: str
 
 
@@ -64,11 +65,16 @@ def arg(
     aliases: list[str] | None = None,
     env: str = "",
     positional: bool = False,
+    subcommand: bool = False,
     required: bool = False,
     action: Action = "",
     **kwargs: Any,
 ) -> Any:
     """`dataclasses.field` wrapper for argument metadata."""
+    # subcommand implies positional
+    if subcommand:
+        positional = True
+
     if required and not positional:
         raise ValueError("optional arguments cannot be required")
 
@@ -83,6 +89,7 @@ def arg(
         action=action,
         required=required,
         positional=positional,
+        subcommand=subcommand,
         env=env,
     )
     if "default_factory" not in kwargs:  # can't set both
@@ -154,12 +161,14 @@ class Arg(ArgPartial):
             aliases = meta.aliases
             required = meta.required
             positional = meta.positional
+            subcommand = meta.subcommand
             env = meta.env
         else:  # need to infer
             action = infer_action(kind)
             aliases = []
             required = f.default is MISSING
             positional = False
+            subcommand = False
             env = ""
 
         # Derive canonical long form from aliases or field name
@@ -178,6 +187,7 @@ class Arg(ArgPartial):
             action=action,
             required=required,
             positional=positional,
+            subcommand=subcommand,
             env=env,
             long=long,
             field_name=f.name,
@@ -332,8 +342,7 @@ def _parse(
             raise ValueError(f"unexpected argument: '{val}'")
 
         spec = positionals.pop(0)
-        # TODO: Mark the positional that is supposed to receive the subcommand name.
-        if spec.long == "command" and val not in cmd.subcommands:
+        if spec.subcommand and val not in cmd.subcommands:
             raise ValueError(f"unknown subcommand name: '{val}'")
 
         if spec.action == "extend":
@@ -342,8 +351,8 @@ def _parse(
         else:
             _do_action(ctx, spec, val)
 
-        # Subcommand
-        if val in cmd.subcommands:
+        # Subcommand handoff (only when processing a subcommand positional)
+        if spec.subcommand and val in cmd.subcommands:
             subcommand = cmd.subcommands[val]
             break
 

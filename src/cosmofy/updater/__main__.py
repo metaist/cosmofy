@@ -36,7 +36,7 @@ Commands:
 @dataclass
 class Args(GlobalArgs):
     __doc__ = usage
-    command: str = arg("", positional=True)  # optional so we can show usage
+    command: str = arg("", subcommand=True)  # optional so we can show usage
 
 
 def run(_: Args) -> int:
