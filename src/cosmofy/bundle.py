@@ -10,6 +10,7 @@ from typing import Literal
 import json
 import logging
 import os
+import platform
 import shlex
 import shutil
 import stat
@@ -77,6 +78,8 @@ Input options:
 Output options:
   -o, --output-dir <PATH>   output directory
                             [default: project-root/dist]
+  -s, --suffix <SUFFIX>     file extension for output executables
+                            [default: '.com' on Windows, '' otherwise]
 
 Cache options:
   -n, --no-cache            do not read or save to the cache
@@ -100,6 +103,7 @@ class Args(GlobalArgs):
 
     # output
     output_dir: Path | None = arg(None)
+    suffix: str | None = arg(None, short="-s")
 
     # cache
     no_cache: bool = arg(False, short="-n", env="COSMOFY_NO_CACHE")
@@ -164,6 +168,7 @@ def console_scripts_from_venv(pkg: str, venv: Path) -> dict[str, str]:
 class Bundler:
     args: Args
     banner: str
+    suffix: str
 
     bundle: ZipFile2
 
@@ -171,6 +176,10 @@ class Bundler:
         """Construct a bundler."""
         self.args = args
         self.banner = args.banner
+        if args.suffix is None:
+            self.suffix = ".com" if platform.system() == "Windows" else ""
+        else:
+            self.suffix = args.suffix
 
     # File System
 
@@ -335,7 +344,7 @@ class Bundler:
         name = self.args.entry[0]
         first = self.bundle_entry_point(
             src=cosmo_python,
-            dest=output_dir / name,
+            dest=output_dir / (name + self.suffix),
             venv=venv,
             entry_point=entry_points[name],
         )
@@ -343,7 +352,7 @@ class Bundler:
         for name in self.args.entry[1:]:  # bundle rest by replacing .args
             result[name] = self.bundle_entry_point(
                 first,
-                output_dir / name,
+                output_dir / (name + self.suffix),
                 entry_point=entry_points[name],
             )
         # all entry points built
@@ -361,7 +370,9 @@ class Bundler:
         if not script.is_file():
             raise FileNotFoundError(f"cannot find script file: {script}")
 
-        dest = self.fs_copy(cosmo_python, (output_dir or script.parent) / script.stem)
+        dest = self.fs_copy(
+            cosmo_python, (output_dir or script.parent) / (script.stem + self.suffix)
+        )
         with open_zip(dest, mode="a") as bundle:
             self.bundle_venv(
                 bundle,
@@ -379,7 +390,9 @@ class Bundler:
         """Build a venv and bundle it into a Cosmopolitan Python executable."""
         with tempfile.TemporaryDirectory(prefix="cosmofy-python-") as cosmo_temp:
             log.debug(f"temp dir={cosmo_temp}")
-            cosmo_python = self.get_cosmo_python(Path(cosmo_temp) / "python")
+            cosmo_python = self.get_cosmo_python(
+                Path(cosmo_temp) / ("python" + self.suffix)
+            )
             version = get_version(cosmo_python)
             if not version:
                 raise ValueError("could not get Cosmopolitan Python version")
