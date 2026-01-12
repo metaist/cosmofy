@@ -50,7 +50,7 @@ Action = Literal[
 class ArgPartial:
     """User-specified argument configuration (before full resolution)."""
 
-    short: str
+    aliases: list[str]
     action: Action
     required: bool
     positional: bool
@@ -61,6 +61,7 @@ def arg(
     default: Any,
     *,
     short: str = "",
+    aliases: list[str] | None = None,
     env: str = "",
     positional: bool = False,
     required: bool = False,
@@ -71,9 +72,14 @@ def arg(
     if required and not positional:
         raise ValueError("optional arguments cannot be required")
 
+    # Combine short and aliases (short takes precedence)
+    all_aliases = list(aliases) if aliases else []
+    if short and short not in all_aliases:
+        all_aliases.insert(0, short)
+
     metadata = kwargs.pop("metadata", {})
     metadata["arg"] = ArgPartial(
-        short=short,
+        aliases=all_aliases,
         action=action,
         required=required,
         positional=positional,
@@ -145,28 +151,39 @@ class Arg(ArgPartial):
         meta: ArgPartial | None = f.metadata.get("arg")
         if meta is not None:
             action = meta.action or infer_action(kind, meta.positional)
-            short = meta.short
+            aliases = meta.aliases
             required = meta.required
             positional = meta.positional
             env = meta.env
         else:  # need to infer
             action = infer_action(kind)
-            short = ""
+            aliases = []
             required = f.default is MISSING
             positional = False
             env = ""
 
+        # Derive canonical long form from aliases or field name
+        if positional:
+            long = f.name
+        else:
+            # Find first --alias, or derive from field name
+            long_aliases = [a for a in aliases if a.startswith("--")]
+            long = long_aliases[0] if long_aliases else f"--{f.name.replace('_', '-')}"
+            # Add derived long to aliases if not present
+            if long not in aliases:
+                aliases = [long] + aliases
+
         return cls(
-            long=f.name if positional else f"--{f.name.replace('_', '-')}",
-            short=short,
+            aliases=aliases,
+            action=action,
+            required=required,
+            positional=positional,
             env=env,
+            long=long,
             field_name=f.name,
             field_type=kind,
             item_type=item_type,
             choices=choices,
-            action=action,
-            positional=positional,
-            required=required,
         )
 
 
@@ -302,6 +319,8 @@ def _parse(
 
         # Optional
         if val.startswith("--") and " " not in val:
+            # Expand non-canonical long aliases to canonical form
+            val = aliases.get(val, val)
             spec = optionals.get(val)
             if not spec:
                 raise ValueError(f"unknown option: '{val}'")
@@ -368,7 +387,12 @@ class Command:
     @property
     def aliases(self) -> dict[str, str]:
         """Return argument aliases mapped to their long counter-parts."""
-        return {a.short: a.long for a in self._args if a.short}
+        result: dict[str, str] = {}
+        for a in self._args:
+            for alias in a.aliases:
+                if alias != a.long:  # map non-canonical aliases to long form
+                    result[alias] = a.long
+        return result
 
     @property
     def optionals(self) -> dict[str, Arg]:
