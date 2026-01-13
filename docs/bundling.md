@@ -82,6 +82,35 @@ uvx cosmofy bundle --python-url https://example.com/custom-python
 
 Or set `COSMOFY_PYTHON_URL` environment variable.
 
+## Bytecode Compilation
+
+Compile Python files to bytecode (`.pyc`) for faster startup:
+
+```bash
+uvx cosmofy bundle --compile-bytecode
+```
+
+This uses the Cosmopolitan Python in the bundle to compile `.py` files. The trade-off is slightly larger bundle size for faster initial import times.
+
+## Output Format
+
+Get structured JSON output instead of text:
+
+```bash
+uvx cosmofy bundle --output-format json
+```
+
+The JSON output includes paths to all generated bundles:
+
+```json
+{
+  "entry_points": ["dist/my_command"],
+  "scripts": []
+}
+```
+
+This is useful for scripting and CI/CD pipelines.
+
 ## Dry Run
 
 See what would happen without making changes:

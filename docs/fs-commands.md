@@ -125,3 +125,23 @@ uvx cosmofy fs args my_bundle '-m my_module'
 ```
 
 See [.args File](args-file.md) for more details.
+
+## JSON Output
+
+All `fs` commands support `--output-format json` for structured output:
+
+```bash
+# List files as JSON
+uvx cosmofy fs ls my_bundle --output-format json
+
+# Get file contents as JSON
+uvx cosmofy fs cat my_bundle .args --output-format json
+
+# Track what was added
+uvx cosmofy fs add my_bundle file.py --output-format json
+
+# Track what was removed
+uvx cosmofy fs rm my_bundle old.py --output-format json
+```
+
+This is useful for scripting and parsing results programmatically.

@@ -387,7 +387,7 @@ Arguments:
 
 Options:
   -f, --force               ignore nonexistent files
-  -r, --recursive           recursively remove directories
+  -r, -R, --recursive       recursively remove directories
 
 Global options:
   -h, --help                show this help message

@@ -30,21 +30,55 @@ pip install cosmofy
 
 You can also download the `cosmofy` binary directly.
 
-**macOS / Linux:**
+=== "macOS / Linux"
 
-```bash
-dest=~/.local/bin/cosmofy
-curl -sSz $dest -o $dest -L https://github.com/metaist/cosmofy/releases/latest/download/cosmofy
-chmod +x $dest
-```
+    ```bash
+    dest=~/.local/bin/cosmofy
+    curl -sSz $dest -o $dest -L https://github.com/metaist/cosmofy/releases/latest/download/cosmofy
+    chmod +x $dest
+    ```
 
-**Windows:**
+=== "Windows"
 
-```powershell
-$dest = "$env:LOCALAPPDATA\cosmofy\cosmofy.exe"
-New-Item -ItemType Directory -Force -Path (Split-Path $dest)
-Invoke-WebRequest -Uri "https://github.com/metaist/cosmofy/releases/latest/download/cosmofy" -OutFile $dest
-```
+    ```powershell
+    $dest = "$env:LOCALAPPDATA\cosmofy\cosmofy.exe"
+    New-Item -ItemType Directory -Force -Path (Split-Path $dest)
+    Invoke-WebRequest -Uri "https://github.com/metaist/cosmofy/releases/latest/download/cosmofy" -OutFile $dest
+    ```
+
+### Shell Completions
+
+Enable tab completion for your shell:
+
+=== "Bash"
+
+    Add to `~/.bashrc`:
+
+    ```bash
+    eval "$(cosmofy completions bash)"
+    ```
+
+=== "Zsh"
+
+    Add to `~/.zshrc`:
+
+    ```zsh
+    eval "$(cosmofy completions zsh)"
+    ```
+
+    Or save to your fpath:
+
+    ```zsh
+    cosmofy completions zsh > ~/.zfunc/_cosmofy
+    ```
+
+=== "Fish"
+
+    Save to completions directory:
+
+    ```fish
+    cosmofy completions fish > ~/.config/fish/completions/cosmofy.fish
+    ```
 
 ## Quick Example
 

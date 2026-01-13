@@ -26,9 +26,13 @@ Custom Python versions are not currently supported. See [#44](https://github.com
 
 ## Bytecode Compilation
 
-Automatic Python bytecode compilation (`.pyc` files) is currently disabled.
+Bytecode compilation (`.pyc` files) is available but not enabled by default. Use `--compile-bytecode` to enable it:
 
-See [#41](https://github.com/metaist/cosmofy/issues/41).
+```bash
+uvx cosmofy bundle --compile-bytecode
+```
+
+This trades slightly larger bundle size for faster import times.
 
 ## Platform-Specific Features
 
