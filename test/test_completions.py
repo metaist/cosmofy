@@ -902,3 +902,63 @@ def test_run_with_exception(
     result = completions.run(args)
 
     assert result == 1
+
+
+def test_bash_no_value_flags() -> None:
+    """Test bash completion when no flags take values."""
+    usage = """\
+Usage: cmd [OPTIONS]
+
+Options:
+  -v, --verbose             verbose mode
+  -q, --quiet               quiet mode
+"""
+
+    @dataclass
+    class Cmd:
+        verbose: bool = arg(False, short="-v")
+        quiet: bool = arg(False, short="-q")
+
+    def noop(_: object) -> int:
+        return 0
+
+    cmd = Command("cmd", Cmd, noop, usage)
+    result = completions.generate_bash(cmd)
+
+    # Should not have "case $prev in" since no flags take values
+    # But should still have flag completions
+    assert "_cmd_completions()" in result
+    assert "--verbose" in result
+    assert "--quiet" in result
+
+
+def test_fish_subcommand_with_choices() -> None:
+    """Test fish completion with subcommand that has choices option."""
+
+    @dataclass
+    class Parent:
+        pass
+
+    @dataclass
+    class Child:
+        mode: str = arg("")
+
+    def noop(_: object) -> int:
+        return 0
+
+    child_usage = """\
+Child command.
+
+Usage: parent child [OPTIONS]
+
+Options:
+      --mode <MODE>         mode [choices: fast, slow]
+"""
+    child = Command("child", Child, noop, child_usage)
+    parent = Command("parent", Parent, noop, subcommands={"child": child})
+
+    result = completions.generate_fish(parent)
+
+    # Should have choices in subcommand completions
+    assert "__fish_seen_subcommand_from child" in result
+    assert "-a 'fast slow'" in result

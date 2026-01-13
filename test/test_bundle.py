@@ -888,3 +888,123 @@ def test_run_error(mock_bundler_run: MagicMock, mock_ensure_uv: MagicMock) -> No
     result = run(args)
 
     assert result == 2
+
+
+def test_venv_site_packages_lib_exists_no_python(tmp_path: Path) -> None:
+    """Test venv_site_packages when lib/ exists but has no python*/site-packages."""
+    # Create lib dir without python subdirs, plus Windows structure
+    lib = tmp_path / "lib"
+    lib.mkdir()
+    # No python* directories inside lib
+
+    # Create Windows structure as fallback
+    sp = tmp_path / "Lib" / "site-packages"
+    sp.mkdir(parents=True)
+
+    result = venv_site_packages(tmp_path)
+    assert result == sp
+
+
+@patch("cosmofy.bundle.subprocess.check_output")
+def test_bundler_uv_sync_script_no_venv(
+    mock_check_output: MagicMock, tmp_path: Path
+) -> None:
+    """Test Bundler.uv_sync with script but no venv (venv=None)."""
+    script_path = tmp_path / "script.py"
+    script_path.write_text("print('hello')")
+    mock_check_output.return_value = '{"sync": {"environment": {"path": ""}}}'
+
+    args = baton.parse(Args, split(""))
+    bundler = Bundler(args)
+    # Call with venv=None and script provided
+    bundler.uv_sync(pkg="script.py", version="3.11", venv=None, script=script_path)
+
+    call_args = mock_check_output.call_args[0][0]
+    assert "--script" in call_args
+    # Should NOT have --active since venv is None
+    assert "--active" not in call_args
+
+
+@patch("cosmofy.bundle.Bundler.bundle_entry_points")
+@patch("cosmofy.bundle.Bundler.uv_version")
+@patch("cosmofy.bundle.get_version")
+@patch("cosmofy.bundle.Bundler.get_cosmo_python")
+def test_bundler_run_with_output_dir_set(
+    mock_get_cosmo: MagicMock,
+    mock_get_version: MagicMock,
+    mock_uv_version: MagicMock,
+    mock_bundle_eps: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """Test Bundler.run when output_dir is already set."""
+    cosmo_python = tmp_path / "python"
+    cosmo_python.write_bytes(b"python")
+    mock_get_cosmo.return_value = cosmo_python
+    mock_get_version.return_value = "3.11.0"
+    mock_uv_version.return_value = ("mypackage", "1.0.0")
+    mock_bundle_eps.return_value = {}
+
+    output_dir = tmp_path / "custom_dist"
+    output_dir.mkdir()
+
+    # Provide output_dir explicitly
+    args = baton.parse(Args, split(f"--output-dir {output_dir}"))
+    bundler = Bundler(args)
+    bundler.run()
+
+    # Should use the provided output_dir, not find_project_root() / "dist"
+    assert args.output_dir == output_dir
+
+
+@patch("cosmofy.bundle.Bundler.bundle_script")
+@patch("cosmofy.bundle.get_version")
+@patch("cosmofy.bundle.Bundler.get_cosmo_python")
+def test_bundler_run_scripts_with_output_dir(
+    mock_get_cosmo: MagicMock,
+    mock_get_version: MagicMock,
+    mock_bundle_script: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """Test Bundler.run with scripts and output_dir set."""
+    cosmo_python = tmp_path / "python"
+    cosmo_python.write_bytes(b"python")
+    mock_get_cosmo.return_value = cosmo_python
+    mock_get_version.return_value = "3.11.0"
+
+    script = tmp_path / "myscript.py"
+    script.write_text("print('hello')")
+
+    output_dir = tmp_path / "dist"
+    output_dir.mkdir()
+
+    args = baton.parse(Args, split(f"--script {script} --output-dir {output_dir}"))
+    bundler = Bundler(args)
+    result = bundler.run()
+
+    # Result should have script path using output_dir
+    assert "scripts" in result
+
+
+@patch("cosmofy.bundle.ensure_uv")
+@patch("cosmofy.bundle.Bundler.run")
+def test_run_json_output(
+    mock_bundler_run: MagicMock,
+    mock_ensure_uv: MagicMock,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test run function with JSON output format."""
+    from cosmofy.bundle import run as bundle_run
+
+    mock_ensure_uv.return_value = True
+    mock_bundler_run.return_value = {"entry_points": ["dist/mycmd"], "scripts": []}
+
+    args = baton.parse(Args, split("--output-format json"))
+    result = bundle_run(args)
+
+    assert result == 0
+    captured = capsys.readouterr()
+    import json
+
+    data = json.loads(captured.out)
+    assert "entry_points" in data
+    assert data["entry_points"] == ["dist/mycmd"]

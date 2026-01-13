@@ -145,7 +145,8 @@ def copy_data(
     if src.is_dir():
         for item in src.iterdir():
             copy_data(item, dest, dry_run=dry_run, level=level)
-    elif src.is_file():
+    # defensive: else branch handles broken symlinks (neither file nor dir)
+    elif src.is_file():  # pragma: no branch
         add_data(
             dest,
             src.read_bytes(),

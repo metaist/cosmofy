@@ -105,3 +105,33 @@ def test_run_no_bundle() -> None:
     args = baton.parse(Args, split("nonexistent.zip"))
     result = run(args)
     assert result == 2
+
+
+def test_run_json_output(tmp_path: Path) -> None:
+    """Test run command with JSON output format."""
+    import io
+    import json
+    import sys
+
+    bundle_path = tmp_path / "bundle.zip"
+    with ZipFile2(bundle_path, "w") as z:
+        z.writestr("test.txt", "keep")
+        z.writestr(f"{PATH_COSMOFY}/__init__.py", "cosmofy")
+        z.writestr(".args", "-m\ncosmofy.updater.run\n-m\nmymodule")
+
+    args = baton.parse(Args, split(f"{bundle_path} --output-format json"))
+
+    # Capture stdout
+    old_stdout = sys.stdout
+    sys.stdout = captured = io.StringIO()
+    try:
+        result = run(args)
+    finally:
+        sys.stdout = old_stdout
+
+    assert result == 0
+    output = captured.getvalue()
+    data = json.loads(output)
+    assert "bundle" in data
+    assert "removed" in data
+    assert "updated_args" in data

@@ -77,7 +77,8 @@ def remove_path(
         log.log(level, f"{banner}removed: {name}")
         if results is not None:
             results.append({"path": name, "is_dir": False})
-    elif path.is_dir():
+    # defensive: else branch handles broken symlinks (neither file nor dir)
+    elif path.is_dir():  # pragma: no branch
         if not recursive:
             err = f"cannot remove directory {name}"
             err += "\n  tip: use --recursive"

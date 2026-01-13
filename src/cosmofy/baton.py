@@ -311,7 +311,8 @@ def _parse(
                     if not positionals:
                         raise ValueError(f"unexpected argument: '{v}'")
                     _do_action(ctx, positionals.pop(0), v)
-            elif argv:
+            # defensive: positionals exhausted before argv
+            elif argv:  # pragma: no cover
                 raise ValueError(f"unexpected argument: '{argv[0]}'")
             argv = []
             break

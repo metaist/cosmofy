@@ -739,3 +739,29 @@ def test_command_main_argv_none() -> None:
         assert result == 0
     finally:
         sys.argv = orig_argv
+
+
+def test_arg_long_already_in_aliases() -> None:
+    """Test that long alias is not duplicated when already present."""
+
+    @dataclass
+    class X:
+        # Explicitly provide --verbose as an alias
+        verbose: bool = arg(False, short="-v", aliases=["--verbose"])
+
+    spec = baton.Arg.from_class(X)
+    assert spec[0].long == "--verbose"
+    # --verbose should appear only once in aliases
+    assert spec[0].aliases.count("--verbose") == 1
+
+
+def test_color_handler_non_color_formatter() -> None:
+    """Test ColorHandler.setFormatter with a non-ColorFormatter."""
+    import logging
+
+    handler = baton.ColorHandler()
+    # Use a regular Formatter, not ColorFormatter
+    formatter = logging.Formatter("%(message)s")
+    handler.setFormatter(formatter)
+    # Should not raise, just set the formatter normally
+    assert handler.formatter is formatter

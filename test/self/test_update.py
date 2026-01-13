@@ -127,3 +127,32 @@ def test_run_json_output(
     assert '"update_available": true' in captured.out
     assert '"local_version": "1.0.0"' in captured.out
     assert '"remote_version": "2.0.0"' in captured.out
+
+
+@patch("cosmofy.self.update.download_release")
+@patch("cosmofy.self.update.check")
+@patch("cosmofy.self.update.zipfile.ZipFile")
+@patch("cosmofy.self.update.is_zipfile")
+def test_run_download_failed(
+    mock_is_zipfile: MagicMock,
+    mock_zipfile: MagicMock,
+    mock_check: MagicMock,
+    mock_download: MagicMock,
+) -> None:
+    """Test run when download fails (returns None)."""
+    mock_is_zipfile.return_value = True
+    mock_local = MagicMock(version="1.0.0")
+    mock_remote = MagicMock(
+        version="2.0.0",
+        release_url="https://example.com/release",
+        hash="abc",
+        algo="sha256",
+    )
+    mock_check.return_value = (True, mock_local, mock_remote)
+    # download_release returns None when download/hash verification fails
+    mock_download.return_value = None
+
+    args = baton.parse(Args, split(""))
+    result = run(args)
+    assert result == 0  # Doesn't fail, just doesn't update
+    mock_download.assert_called_once()

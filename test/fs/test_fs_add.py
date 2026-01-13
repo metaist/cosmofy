@@ -316,3 +316,26 @@ def test_run_file_outside_chdir(tmp_path: Path) -> None:
         # File should be added with path as-is (relative path handling)
         names = z.namelist()
         assert any("file.txt" in n for n in names)
+
+
+def test_run_json_output(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test run command with JSON output format."""
+    src = tmp_path / "file.txt"
+    src.write_text("content")
+
+    bundle_path = tmp_path / "bundle.zip"
+    with ZipFile2(bundle_path, "w"):
+        pass
+
+    args = baton.parse(
+        Args, split(f"{bundle_path} --chdir {tmp_path} --output-format json file.txt")
+    )
+    result = run(args)
+    assert result == 0
+
+    import json
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert "added" in data
+    assert any("file.txt" in item["dest"] for item in data["added"])

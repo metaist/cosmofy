@@ -735,3 +735,125 @@ def test_copy_cosmofy_dist_info_not_found(
         with pytest.raises(FileNotFoundError) as exc:
             copy_cosmofy(bundle)
         assert "could not location" in str(exc.value)
+
+
+@patch("cosmofy.updater.add.write_receipt")
+@patch("cosmofy.updater.add.copy_cosmofy")
+@patch("cosmofy.updater.add.set_args")
+@patch("cosmofy.updater.add.get_args")
+def test_run_with_receipt_already_set(
+    mock_get_args: MagicMock,
+    mock_set_args: MagicMock,
+    mock_copy: MagicMock,
+    mock_write: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """Test run command when --receipt is already provided."""
+    from cosmofy.updater.add import run
+    from cosmofy.zipfile2 import ZipFile2
+
+    mock_get_args.return_value = "-m mymodule"
+    mock_write.return_value = MagicMock()
+
+    bundle_path = tmp_path / "bundle.zip"
+    with ZipFile2(bundle_path, "w") as z:
+        z.writestr("test.txt", "content")
+
+    custom_receipt = tmp_path / "custom_receipt.json"
+
+    args = baton.parse(
+        Args,
+        split(
+            f"{bundle_path} --receipt {custom_receipt} "
+            f"--release-url https://example.com/file --release-version 1.0.0"
+        ),
+    )
+    result = run(args)
+    assert result == 0
+    # Should use the provided receipt, not infer it
+    assert args.receipt == custom_receipt
+
+
+@patch("cosmofy.updater.add.add_data")
+@patch("cosmofy.updater.add.Receipt")
+def test_write_receipt_dry_run(
+    mock_receipt_cls: MagicMock, mock_add_data: MagicMock, tmp_path: Path
+) -> None:
+    """Test write_receipt in dry_run mode doesn't write to disk."""
+    from cosmofy.updater.add import write_receipt
+    from cosmofy.zipfile2 import ZipFile2
+
+    mock_receipt = MagicMock()
+    mock_receipt.is_valid.return_value = True
+    mock_receipt.__str__ = MagicMock(return_value='{"test": "data"}')  # type: ignore[method-assign]
+    mock_receipt_cls.return_value = mock_receipt
+    mock_receipt_cls.from_path.return_value = MagicMock(
+        algo="sha256", hash="abc123", version="1.0.0"
+    )
+
+    bundle_path = tmp_path / "bundle.zip"
+    with ZipFile2(bundle_path, "w") as z:
+        z.writestr("test.txt", "content")
+
+    output_path = tmp_path / "receipt.json"
+
+    with ZipFile2(bundle_path, "a") as bundle:
+        write_receipt(
+            bundle_path,
+            bundle,
+            output=output_path,
+            receipt_url="https://example.com/receipt.json",
+            release_url="https://example.com/file",
+            release_version="1.0.0",
+            dry_run=True,  # Dry run mode
+        )
+
+    # File should NOT be written in dry run mode
+    assert not output_path.exists()
+
+
+@patch("cosmofy.updater.add.write_receipt")
+@patch("cosmofy.updater.add.copy_cosmofy")
+@patch("cosmofy.updater.add.set_args")
+@patch("cosmofy.updater.add.get_args")
+def test_run_json_output(
+    mock_get_args: MagicMock,
+    mock_set_args: MagicMock,
+    mock_copy: MagicMock,
+    mock_write: MagicMock,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test run command with JSON output format."""
+    from cosmofy.updater.add import run
+    from cosmofy.zipfile2 import ZipFile2
+    import json
+
+    mock_get_args.return_value = "-m mymodule"
+    mock_receipt = MagicMock()
+    mock_receipt.asdict.return_value = {
+        "version": "1.0.0",
+        "algo": "sha256",
+        "hash": "abc",
+    }
+    mock_write.return_value = mock_receipt
+
+    bundle_path = tmp_path / "bundle.zip"
+    with ZipFile2(bundle_path, "w") as z:
+        z.writestr("test.txt", "content")
+
+    args = baton.parse(
+        Args,
+        split(
+            f"{bundle_path} --release-url https://example.com/file "
+            f"--release-version 1.0.0 --output-format json"
+        ),
+    )
+    result = run(args)
+    assert result == 0
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert "bundle" in data
+    assert "receipt" in data
+    assert "copied_cosmofy" in data

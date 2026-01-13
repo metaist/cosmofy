@@ -251,3 +251,52 @@ def test_remove_path_directory_no_entry() -> None:
             assert "dir/file2.txt" not in names
     finally:
         path.unlink(missing_ok=True)
+
+
+def test_remove_path_directory_with_results(tmp_path: Path) -> None:
+    """Test removing a directory with results tracking."""
+    bundle_path = tmp_path / "bundle.zip"
+
+    with ZipFile2(bundle_path, "w") as z:
+        z.writestr("dir/", "")  # explicit directory entry
+        z.writestr("dir/file.txt", "hello")
+
+    results: list[dict[str, object]] = []
+
+    with ZipFile2(bundle_path, "a") as z:
+        remove_path(z, "dir/", recursive=True, results=results)
+
+    # Should have results for both file and directory
+    assert len(results) == 2
+    # Check directory entry in results
+    dir_result = [r for r in results if r["is_dir"]]
+    assert len(dir_result) == 1
+    assert dir_result[0]["path"] == "dir/"
+
+
+def test_run_json_output(tmp_path: Path) -> None:
+    """Test run command with JSON output format."""
+    import io
+    import json
+    import sys
+
+    bundle_path = tmp_path / "bundle.zip"
+
+    with ZipFile2(bundle_path, "w") as z:
+        z.writestr("test.txt", "hello")
+
+    args = baton.parse(Args, split(f"{bundle_path} --output-format json test.txt"))
+
+    # Capture stdout
+    old_stdout = sys.stdout
+    sys.stdout = captured = io.StringIO()
+    try:
+        result = run(args)
+    finally:
+        sys.stdout = old_stdout
+
+    assert result == 0
+    output = captured.getvalue()
+    data = json.loads(output)
+    assert "removed" in data
+    assert any("test.txt" in item["path"] for item in data["removed"])

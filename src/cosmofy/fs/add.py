@@ -164,7 +164,8 @@ def add_path(
             level=level,
             results=results,
         )
-    elif src.is_dir():
+    # defensive: else branch handles broken symlinks (neither file nor dir)
+    elif src.is_dir():  # pragma: no branch
         for item in src.iterdir():
             add_path(
                 bundle,

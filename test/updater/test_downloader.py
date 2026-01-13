@@ -284,3 +284,23 @@ def test_download_release_http_error(
         "https://example.com/app.exe", tmp_path / "app.exe", "expected_hash"
     )
     assert result is None
+
+
+@patch("cosmofy.updater.downloader.platform.system")
+@patch("cosmofy.updater.downloader.sys")
+def test_move_executable_windows_dest_not_exists(
+    mock_sys: MagicMock, mock_system: MagicMock, tmp_path: Path
+) -> None:
+    """Test move_executable on Windows when dest doesn't exist."""
+    mock_system.return_value = "Windows"
+
+    src = tmp_path / "new.exe"
+    src.write_bytes(b"new content")
+    dest = tmp_path / "nonexistent.exe"
+    # dest does NOT exist
+    mock_sys.executable = str(dest)
+
+    result = move_executable(src, dest)
+    assert result == dest
+    assert dest.exists()
+    assert dest.read_bytes() == b"new content"
