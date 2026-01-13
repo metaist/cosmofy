@@ -293,6 +293,50 @@ def test_runner_get_files() -> None:
         path.unlink(missing_ok=True)
 
 
+def test_runner_get_files_deduplicates() -> None:
+    """Test Runner.get_files deduplicates when same file matched multiple times."""
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+        path = Path(f.name)
+
+    try:
+        with ZipFile2(path, "w") as z:
+            z.writestr("file.txt", "content")
+
+        with ZipFile2(path, "r") as bundle:
+            # Request the same file twice via different patterns
+            args = baton.parse(Args, split(f"{path} file.txt file.txt"))
+            runner = Runner(bundle, args)
+            files = list(runner.get_files())
+            # Should only appear once
+            assert len(files) == 1
+            assert files[0].filename == "file.txt"
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def test_runner_get_files_excludes_hidden() -> None:
+    """Test Runner.get_files excludes hidden files by default."""
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+        path = Path(f.name)
+
+    try:
+        with ZipFile2(path, "w") as z:
+            z.writestr("dir/", "")
+            z.writestr("dir/.hidden", "hidden")
+            z.writestr("dir/visible.txt", "visible")
+
+        with ZipFile2(path, "r") as bundle:
+            # List dir without --all, hidden file should be excluded
+            args = baton.parse(Args, split(f"{path} dir/"))
+            runner = Runner(bundle, args)
+            files = list(runner.get_files())
+            names = [f.filename for f in files]
+            assert "dir/visible.txt" in names
+            assert "dir/.hidden" not in names
+    finally:
+        path.unlink(missing_ok=True)
+
+
 def test_runner_get_files_not_found() -> None:
     """Test Runner.get_files raises on nonexistent file."""
     with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
@@ -340,6 +384,20 @@ def test_run_success(tmp_path: Path) -> None:
         z.writestr("file.txt", "content")
 
     args = baton.parse(Args, split(f"{bundle_path}"))
+    result = run(args)
+    assert result == 0
+
+
+def test_run_with_file_pattern(tmp_path: Path) -> None:
+    """Test run command with specific file pattern."""
+    from cosmofy.fs.ls import run
+
+    bundle_path = tmp_path / "bundle.zip"
+    with ZipFile2(bundle_path, "w") as z:
+        z.writestr("file.txt", "content")
+        z.writestr("other.txt", "other")
+
+    args = baton.parse(Args, split(f"{bundle_path} file.txt"))
     result = run(args)
     assert result == 0
 
