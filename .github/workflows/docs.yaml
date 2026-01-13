@@ -1,6 +1,7 @@
 name: Deploy Docs
 
 on:
+  workflow_dispatch: # Allow manual triggers
   push:
     branches: [main]
     paths:
