@@ -39,3 +39,4 @@ uvx cosmofy bundle       # produces dist/my_command
 - [GitHub Repository](https://github.com/metaist/cosmofy)
 - [PyPI Package](https://pypi.org/project/cosmofy)
 - [Changelog](https://github.com/metaist/cosmofy/blob/main/CHANGELOG.md)
+
