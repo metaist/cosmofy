@@ -36,5 +36,5 @@ jobs:
       - name: Run tests (pytest, coverage)
         run: ds test
 
-      - name: Build docs (pdoc)
+      - name: Build docs (mkdocs)
         run: ds docs

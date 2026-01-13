@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project.urls]
 Homepage = "https://github.com/metaist/cosmofy"
-Documentation = "https://metaist.github.io/cosmofy/"
+Documentation = "https://docs.metaist.com/cosmofy/"
 Repository = "https://github.com/metaist/cosmofy.git"
 Changelog = "https://github.com/metaist/cosmofy/blob/main/CHANGELOG.md"
 
@@ -50,13 +50,13 @@ dev = [
   "coverage",
   "ds-run",
   "mypy",
-  "pdoc3",
   "pip", # for mypy
   "pyright",
   "pytest-cov",
   "pytest",
   "ruff",
   "ty",
+  "mkdocs-material>=9.7.1",
 ]
 
 [tool.coverage.report]
@@ -86,6 +86,7 @@ clean = """
   rm -rf .ruff_cache;
   rm -rf dist;
   rm -rf htmlcov;
+  rm -rf site;
   rm -rf src/*.egg-info
 """
 
@@ -130,20 +131,10 @@ coverage-serve = { shell = "uv run -m http.server 8080", cwd = "htmlcov" }
 coverage = ["coverage-*"]
 
 # Documentation
-docs = ["cog", "pdoc"]
-cog = "cog -r README.md"
-pdoc = """
-  rm -rf docs;
-  mkdir -p docs;
-  pdoc \
-    --html \
-    --output-dir docs \
-    --config sort_identifiers=False \
-    --config show_inherited_members=True \
-    --force src/$(basename $(pwd));
-  mv docs/**/* docs/;
-  touch docs/.nojekyll
-"""
+docs = ["cog", "mkdocs-build"]
+cog = "cog -r docs/*.md"
+mkdocs-build = "mkdocs build"
+mkdocs-serve = "mkdocs serve"
 
 # Common
 dev.help = "lint, type-check, and unit tests"

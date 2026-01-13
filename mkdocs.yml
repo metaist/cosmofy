@@ -1,0 +1,62 @@
+site_name: cosmofy
+site_url: https://docs.metaist.com/cosmofy/
+site_description: Cosmopolitan Python Bundler
+site_author: Metaist LLC
+
+repo_url: https://github.com/metaist/cosmofy
+repo_name: metaist/cosmofy
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Bundling: bundling.md
+  - Self-Updater: self-updater.md
+  - ".args File": args-file.md
+  - Filesystem Commands: fs-commands.md
+  - CLI Reference: cli.md
+  - Limitations: limitations.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/metaist/cosmofy
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/cosmofy
