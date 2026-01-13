@@ -386,6 +386,20 @@ def test_command_run_fish(capsys: pytest.CaptureFixture[str]) -> None:
     assert "# Fish completion for cosmofy" in captured.out
 
 
+def test_command_run_json_output(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test the completions command with JSON output format."""
+    args = completions.Args(shell="bash", output_format="json")  # type: ignore[arg-type]
+    result = completions.run(args)
+
+    assert result == 0
+    captured = capsys.readouterr()
+    import json
+
+    data = json.loads(captured.out)
+    assert data["shell"] == "bash"
+    assert "# Bash completion for cosmofy" in data["script"]
+
+
 def test_flag_info_dataclass() -> None:
     """Test FlagInfo dataclass."""
     flag = completions.FlagInfo(

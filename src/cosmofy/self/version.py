@@ -27,7 +27,6 @@ Usage: cosmofy self version [OPTIONS]
 
 Options:
       --short               only print the version
-      --output-format NAME  [default: text][choices: text, json]
 
 {global_options}
 """
@@ -37,7 +36,6 @@ Options:
 class Args(GlobalArgs):
     __doc__ = usage
     short: bool = arg(False)
-    output_format: OUTPUT_FORMAT = arg("text")
 
 
 def get_version(pkg: str = "cosmofy") -> dict[str, str]:

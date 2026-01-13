@@ -24,7 +24,6 @@ import sys
 from cosmofy.args import common_args
 from cosmofy.args import CommonArgs
 from cosmofy.args import global_options
-from cosmofy.args import OUTPUT_FORMAT
 from cosmofy.baton import arg
 from cosmofy.baton import Command
 from cosmofy.zipfile2 import ZipFile2
@@ -58,7 +57,6 @@ Output options:
   -l, --long                show permissions, size, and modified date
   -h, --human-readable      show sizes using powers of 1024 like 1K 2M 3G etc.
       --si                  show sizes using powers of 1000 (implies -h)
-      --output-format NAME  [default: text][choices: text, json]
 
 {global_options.replace("-h,", "   ")}
 """
@@ -101,9 +99,6 @@ class Args(CommonArgs):
 
     si: bool = arg(False)
     """Whether to use 1000 instead of 1024 for human-readable chunks."""
-
-    output_format: OUTPUT_FORMAT = arg("text")
-    """Output format: text or json."""
 
 
 def human_size(n: float, si: bool = False) -> str:

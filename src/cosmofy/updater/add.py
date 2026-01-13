@@ -10,6 +10,7 @@ from pathlib import Path
 from shutil import which
 from zipfile import is_zipfile
 from zipfile import Path as ZipPath
+import json
 import logging
 import re
 import shlex
@@ -329,7 +330,7 @@ def run(args: Args) -> int:
             if not args.no_args:
                 set_args(bundle, add_arg_prefix(get_args(bundle)), dry_run=args.dry_run)
 
-            write_receipt(
+            receipt = write_receipt(
                 args.bundle,
                 bundle,
                 output=args.receipt,
@@ -337,6 +338,20 @@ def run(args: Args) -> int:
                 release_url=args.release_url,
                 release_version=args.release_version,
                 dry_run=args.dry_run,
+            )
+
+        if args.output_format == "json":
+            print(
+                json.dumps(
+                    {
+                        "bundle": str(args.bundle),
+                        "receipt_path": str(args.receipt),
+                        "receipt": receipt.asdict(),
+                        "copied_cosmofy": not args.no_copy,
+                        "updated_args": not args.no_args,
+                    },
+                    indent=2,
+                )
             )
     except Exception as e:
         args.show_error(log, e)

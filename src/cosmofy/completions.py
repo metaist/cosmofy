@@ -5,6 +5,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
+import json
 import logging
 import re
 import sys
@@ -671,8 +672,11 @@ def run(args: Args) -> int:
 
     args.setup_logger()
     try:
-        output = generate_completions(root_cmd, args.shell)
-        print(output)
+        script = generate_completions(root_cmd, args.shell)
+        if args.output_format == "json":
+            print(json.dumps({"shell": args.shell, "script": script}, indent=2))
+        else:
+            print(script)
     except Exception as e:
         args.show_error(log, e)
         return 1

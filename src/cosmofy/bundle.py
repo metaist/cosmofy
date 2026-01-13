@@ -408,8 +408,10 @@ class Bundler:
         log.info(f"bundled: {dest}")
         return script
 
-    def run(self) -> None:
+    def run(self) -> dict[str, list[str]]:
         """Build a venv and bundle it into a Cosmopolitan Python executable."""
+        result: dict[str, list[str]] = {"entry_points": [], "scripts": []}
+
         with tempfile.TemporaryDirectory(prefix="cosmofy-python-") as cosmo_temp:
             log.debug(f"temp dir={cosmo_temp}")
             self.cosmo_python = self.get_cosmo_python(
@@ -431,13 +433,14 @@ class Bundler:
                     # have an output dir
 
                     pkg, pkg_ver = self.uv_version()
-                    self.bundle_entry_points(
+                    bundles = self.bundle_entry_points(
                         pkg=pkg,
                         version=version,
                         venv=venv,
                         cosmo_python=cosmo_python,
                         output_dir=self.args.output_dir,
                     )
+                    result["entry_points"] = [str(p) for p in bundles.values()]
                 # all entry points built
 
                 for script in self.args.script:
@@ -448,7 +451,17 @@ class Bundler:
                         self.args.output_dir,
                         script,
                     )
+                    if self.args.output_dir:
+                        result["scripts"].append(
+                            str(self.args.output_dir / (script.stem + self.suffix))
+                        )
+                    else:
+                        result["scripts"].append(
+                            str(script.parent / (script.stem + self.suffix))
+                        )
                 # all scripts built
+
+        return result
 
 
 def run(args: Args) -> int:
@@ -456,7 +469,9 @@ def run(args: Args) -> int:
     args.setup_logger()
     try:
         ensure_uv()
-        Bundler(args).run()
+        result = Bundler(args).run()
+        if args.output_format == "json":
+            print(json.dumps(result, indent=2))
     except Exception as e:
         args.show_error(log, e)
         return 2

@@ -36,28 +36,94 @@ def test_run_not_zipfile(mock_is_zipfile: MagicMock) -> None:
     assert result == 2
 
 
-@patch("cosmofy.self.update.self_update")
+@patch("cosmofy.self.update.download_release")
+@patch("cosmofy.self.update.check")
+@patch("cosmofy.self.update.zipfile.ZipFile")
 @patch("cosmofy.self.update.is_zipfile")
-def test_run_success(mock_is_zipfile: MagicMock, mock_self_update: MagicMock) -> None:
+def test_run_success(
+    mock_is_zipfile: MagicMock,
+    mock_zipfile: MagicMock,
+    mock_check: MagicMock,
+    mock_download: MagicMock,
+) -> None:
     """Test run succeeds when running from zipfile."""
     mock_is_zipfile.return_value = True
-    mock_self_update.return_value = None
+    mock_local = MagicMock(version="1.0.0")
+    mock_remote = MagicMock(version="1.0.0", release_url="", hash="", algo="")
+    mock_check.return_value = (False, mock_local, mock_remote)
 
     args = baton.parse(Args, split(""))
     result = run(args)
     assert result == 0
-    mock_self_update.assert_called_once()
 
 
-@patch("cosmofy.self.update.self_update")
+@patch("cosmofy.self.update.download_release")
+@patch("cosmofy.self.update.check")
+@patch("cosmofy.self.update.zipfile.ZipFile")
+@patch("cosmofy.self.update.is_zipfile")
+def test_run_with_update(
+    mock_is_zipfile: MagicMock,
+    mock_zipfile: MagicMock,
+    mock_check: MagicMock,
+    mock_download: MagicMock,
+) -> None:
+    """Test run with available update."""
+    mock_is_zipfile.return_value = True
+    mock_local = MagicMock(version="1.0.0")
+    mock_remote = MagicMock(
+        version="2.0.0",
+        release_url="https://example.com/release",
+        hash="abc",
+        algo="sha256",
+    )
+    mock_check.return_value = (True, mock_local, mock_remote)
+    mock_download.return_value = "/path/to/downloaded"
+
+    args = baton.parse(Args, split(""))
+    result = run(args)
+    assert result == 0
+    mock_download.assert_called_once()
+
+
+@patch("cosmofy.self.update.check")
+@patch("cosmofy.self.update.zipfile.ZipFile")
 @patch("cosmofy.self.update.is_zipfile")
 def test_run_update_error(
-    mock_is_zipfile: MagicMock, mock_self_update: MagicMock
+    mock_is_zipfile: MagicMock,
+    mock_zipfile: MagicMock,
+    mock_check: MagicMock,
 ) -> None:
     """Test run handles update errors."""
     mock_is_zipfile.return_value = True
-    mock_self_update.side_effect = RuntimeError("Update failed")
+    mock_check.side_effect = RuntimeError("Update failed")
 
     args = baton.parse(Args, split(""))
     result = run(args)
     assert result == 2
+
+
+@patch("cosmofy.self.update.download_release")
+@patch("cosmofy.self.update.check")
+@patch("cosmofy.self.update.zipfile.ZipFile")
+@patch("cosmofy.self.update.is_zipfile")
+def test_run_json_output(
+    mock_is_zipfile: MagicMock,
+    mock_zipfile: MagicMock,
+    mock_check: MagicMock,
+    mock_download: MagicMock,
+    capsys: MagicMock,
+) -> None:
+    """Test run with JSON output format."""
+    mock_is_zipfile.return_value = True
+    mock_local = MagicMock(version="1.0.0")
+    mock_remote = MagicMock(version="2.0.0", release_url="", hash="", algo="")
+    mock_check.return_value = (True, mock_local, mock_remote)
+
+    args = baton.parse(Args, split("--output-format json"))
+    result = run(args)
+    assert result == 0
+
+    captured = capsys.readouterr()
+    assert '"update_available": true' in captured.out
+    assert '"local_version": "1.0.0"' in captured.out
+    assert '"remote_version": "2.0.0"' in captured.out

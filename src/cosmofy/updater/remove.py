@@ -3,6 +3,8 @@
 # std
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import Any
+import json
 import logging
 import sys
 
@@ -65,6 +67,8 @@ def run(args: Args) -> int:
     try:
         assert args.ensure_bundle() and args.bundle
 
+        removed: list[dict[str, Any]] = []
+
         with ZipFile2(args.bundle, mode="a") as bundle:
             for name in expand_glob(bundle.namelist(), PATH_COSMOFY + "**"):
                 remove_path(
@@ -73,6 +77,7 @@ def run(args: Args) -> int:
                     force=True,
                     recursive=True,
                     dry_run=args.dry_run,
+                    results=removed,
                 )
 
             if not args.no_args:
@@ -81,6 +86,18 @@ def run(args: Args) -> int:
                     remove_arg_prefix(get_args(bundle)),
                     dry_run=args.dry_run,
                 )
+
+        if args.output_format == "json":
+            print(
+                json.dumps(
+                    {
+                        "bundle": str(args.bundle),
+                        "removed": removed,
+                        "updated_args": not args.no_args,
+                    },
+                    indent=2,
+                )
+            )
     except Exception as e:
         args.show_error(log, e)
         return 2

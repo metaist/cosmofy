@@ -14,7 +14,6 @@ from cosmofy.args import common_args
 from cosmofy.args import CommonArgs
 from cosmofy.args import get_banner
 from cosmofy.args import global_options
-from cosmofy.args import OUTPUT_FORMAT
 from cosmofy.baton import arg
 from cosmofy.baton import Command
 from cosmofy.zipfile2 import ZipFile2
@@ -35,9 +34,6 @@ Arguments:
 {common_args}
   [VAL]                     value to set (if omitted, current value is printed)
 
-Options:
-      --output-format NAME  [default: text][choices: text, json]
-
 {global_options}
 """
 
@@ -46,8 +42,6 @@ Options:
 class Args(CommonArgs):
     __doc__ = usage
     val: str = arg("", positional=True, required=False)
-    output_format: OUTPUT_FORMAT = arg("text")
-    """Output format: text or json."""
 
 
 def get_args(bundle: ZipFile2) -> str:

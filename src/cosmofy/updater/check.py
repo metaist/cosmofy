@@ -14,7 +14,6 @@ from cosmofy.args import common_args
 from cosmofy.args import CommonArgs
 from cosmofy.args import get_banner
 from cosmofy.args import global_options
-from cosmofy.args import OUTPUT_FORMAT
 from cosmofy.baton import arg
 from cosmofy.baton import Command
 
@@ -37,7 +36,6 @@ Arguments:
 Options:
       --receipt-url <URL>   override the published receipt URL
                             [env: RECEIPT_URL={RECEIPT_URL}]
-      --output-format NAME  [default: text][choices: text, json]
 
 {global_options}
 """
@@ -47,8 +45,6 @@ Options:
 class Args(CommonArgs):
     __doc__ = usage
     receipt_url: str = arg(RECEIPT_URL)
-    output_format: OUTPUT_FORMAT = arg("text")
-    """Output format: text or json."""
 
 
 def get_local_receipt(bundle: ZipFile) -> Receipt:

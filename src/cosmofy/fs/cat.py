@@ -14,7 +14,6 @@ import sys
 from cosmofy.args import common_args
 from cosmofy.args import CommonArgs
 from cosmofy.args import global_options
-from cosmofy.args import OUTPUT_FORMAT
 from cosmofy.baton import arg
 from cosmofy.baton import Command
 from cosmofy.zipfile2 import ZipFile2
@@ -38,7 +37,6 @@ Arguments:
 
 Options:
   -p, --prompt              prompt for a decryption password
-      --output-format NAME  [default: text][choices: text, json]
 
 {global_options}
 """
@@ -52,9 +50,6 @@ class Args(CommonArgs):
 
     prompt: bool = arg(False, short="-p")
     """Whether to prompt for a password."""
-
-    output_format: OUTPUT_FORMAT = arg("text")
-    """Output format: text or json."""
 
 
 def file_to_dict(name: str, data: bytes) -> dict[str, Any]:

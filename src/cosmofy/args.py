@@ -41,6 +41,8 @@ Global options:
                             [default: auto][choices: auto, always, never]
                             (auto checks `NO_COLOR`, `FORCE_COLOR`, `CLICOLOR`,
                             `CLICOLOR_FORCE` and tty support)
+      --output-format NAME  output format
+                            [default: text][choices: text, json]
 """.rstrip()
 
 
@@ -51,6 +53,7 @@ class GlobalArgs:
     verbose: int = arg(0, short="-v", action="count")
     dry_run: bool = arg(False)
     color: COLOR_MODE = arg(default="auto")
+    output_format: OUTPUT_FORMAT = arg("text")
 
     @property
     def verbosity(self) -> int:

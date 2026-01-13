@@ -4,9 +4,11 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+import json
 import logging
-import sys
 import os
+import sys
 
 # pkg
 from cosmofy.args import common_args
@@ -88,14 +90,17 @@ def add_data(
     # global
     dry_run: bool = False,
     level: int = logging.INFO,
+    results: list[dict[str, Any]] | None = None,
 ) -> None:
     """Add `data` to `bundle` at location `dest`."""
     dest = sanitize_zip_path(dest)
     banner = get_banner(dry_run)
     for_real = not dry_run
 
+    replaced = False
     if bundle.NameToInfo.get(dest) is not None:  # already exists
         if force:
+            replaced = True
             remove_path(
                 bundle,
                 dest,
@@ -113,6 +118,9 @@ def add_data(
         bundle.add_file(dest, data)
     log.log(level, f"{banner}added {dest}")
 
+    if results is not None:
+        results.append({"dest": dest, "size": len(data), "replaced": replaced})
+
 
 def add_path(
     bundle: ZipFile2,
@@ -125,6 +133,7 @@ def add_path(
     # global
     dry_run: bool = False,
     level: int = logging.INFO,
+    results: list[dict[str, Any]] | None = None,
     _seen: set[str] | None = None,
 ) -> None:
     """Add `src` to `bundle` at location `dest`."""
@@ -146,7 +155,15 @@ def add_path(
             dest = dest[:-3] + ".pyc"  # change extension
             if not dry_run:
                 data = compile_python_external(python, data, dest)
-        add_data(bundle, data, dest, force=force, dry_run=dry_run, level=level)
+        add_data(
+            bundle,
+            data,
+            dest,
+            force=force,
+            dry_run=dry_run,
+            level=level,
+            results=results,
+        )
     elif src.is_dir():
         for item in src.iterdir():
             add_path(
@@ -158,11 +175,17 @@ def add_path(
                 python=python,
                 dry_run=dry_run,
                 level=level,
+                results=results,
                 _seen=_seen,
             )
 
 
-def add_files(bundle: ZipFile2, args: Args, python: Path | None = None) -> None:
+def add_files(
+    bundle: ZipFile2,
+    args: Args,
+    python: Path | None = None,
+    results: list[dict[str, Any]] | None = None,
+) -> None:
     """Add files to the bundle."""
     original = Path.cwd()
     if args.chdir:
@@ -187,6 +210,7 @@ def add_files(bundle: ZipFile2, args: Args, python: Path | None = None) -> None:
                 compile_bytecode=args.compile_bytecode,
                 python=python,
                 dry_run=args.dry_run,
+                results=results,
             )
     finally:
         if args.chdir:
@@ -205,11 +229,16 @@ def run(args: Args) -> int:
         # becomes "Lib". We remove the trailing slash so we can
         # add bits properly.
 
+        results: list[dict[str, Any]] = []
+
         # good to go
         with ZipFile2(args.bundle, mode="a") as bundle:
             # The bundle itself is a Cosmopolitan Python, use it to compile
             python = args.bundle if args.compile_bytecode else None
-            add_files(bundle, args, python=python)
+            add_files(bundle, args, python=python, results=results)
+
+        if args.output_format == "json":
+            print(json.dumps({"added": results}, indent=2))
     except Exception as e:
         args.show_error(log, e)
         return 2
