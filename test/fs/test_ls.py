@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from shlex import split
 from zipfile import ZipInfo
+import json
 import tempfile
 
 # lib
@@ -400,5 +401,51 @@ def test_runner_get_zipinfo_synthetic() -> None:
             info = runner.get_zipinfo(zip_path)
             # It creates a synthetic ZipInfo with the path
             assert "dir" in info.filename
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def test_runner_to_dict() -> None:
+    """Test Runner.to_dict converts ZipInfo to dictionary."""
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+        path = Path(f.name)
+
+    try:
+        with ZipFile2(path, "w") as z:
+            z.writestr("file.txt", "content")
+
+        with ZipFile2(path, "r") as bundle:
+            args = baton.parse(Args, split(f"{path}"))
+            runner = Runner(bundle, args)
+            info = bundle.getinfo("file.txt")
+            result = runner.to_dict(info)
+
+            assert result["filename"] == "file.txt"
+            assert result["file_size"] == 7
+            assert result["is_dir"] is False
+            assert "date_time" in result
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def test_runner_run_json(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test Runner.run with JSON output."""
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
+        path = Path(f.name)
+
+    try:
+        with ZipFile2(path, "w") as z:
+            z.writestr("file.txt", "content")
+
+        with ZipFile2(path, "r") as bundle:
+            args = baton.parse(Args, split(f"{path} file.txt --output-format json"))
+            runner = Runner(bundle, args)
+            runner.run()
+
+            captured = capsys.readouterr()
+            data = json.loads(captured.out)
+            assert isinstance(data, list)
+            assert len(data) == 1
+            assert data[0]["filename"] == "file.txt"
     finally:
         path.unlink(missing_ok=True)

@@ -4,7 +4,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from importlib.metadata import version
-from typing import Literal
 import json
 import logging
 import sys
@@ -12,6 +11,7 @@ import sys
 # pkg
 from cosmofy.args import global_options
 from cosmofy.args import GlobalArgs
+from cosmofy.args import OUTPUT_FORMAT
 from cosmofy.baton import arg
 from cosmofy.baton import COLOR_MODE
 from cosmofy.baton import Command
@@ -31,8 +31,6 @@ Options:
 
 {global_options}
 """
-
-OUTPUT_FORMAT = Literal["text", "json"]
 
 
 @dataclass

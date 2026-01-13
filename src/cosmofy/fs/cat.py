@@ -2,8 +2,11 @@
 
 # std
 from __future__ import annotations
+from base64 import b64encode
 from dataclasses import dataclass
 from getpass import getpass
+from typing import Any
+import json
 import logging
 import sys
 
@@ -11,6 +14,7 @@ import sys
 from cosmofy.args import common_args
 from cosmofy.args import CommonArgs
 from cosmofy.args import global_options
+from cosmofy.args import OUTPUT_FORMAT
 from cosmofy.baton import arg
 from cosmofy.baton import Command
 from cosmofy.zipfile2 import ZipFile2
@@ -34,6 +38,7 @@ Arguments:
 
 Options:
   -p, --prompt              prompt for a decryption password
+      --output-format NAME  [default: text][choices: text, json]
 
 {global_options}
 """
@@ -48,6 +53,21 @@ class Args(CommonArgs):
     prompt: bool = arg(False, short="-p")
     """Whether to prompt for a password."""
 
+    output_format: OUTPUT_FORMAT = arg("text")
+    """Output format: text or json."""
+
+
+def file_to_dict(name: str, data: bytes) -> dict[str, Any]:
+    """Convert file contents to a dictionary for JSON output."""
+    result: dict[str, Any] = {"filename": name, "size": len(data)}
+    try:
+        result["contents"] = data.decode("utf-8")
+        result["encoding"] = "utf-8"
+    except UnicodeDecodeError:
+        result["contents"] = b64encode(data).decode("ascii")
+        result["encoding"] = "base64"
+    return result
+
 
 def show_files(bundle: ZipFile2, args: Args) -> None:
     """Print out the contents of the files."""
@@ -58,15 +78,24 @@ def show_files(bundle: ZipFile2, args: Args) -> None:
         password = getpass().encode("utf-8")
 
     names = bundle.namelist()
+    results: list[dict[str, Any]] = []
+
     for pat in args.file:
         for name in expand_glob(names, pat):
             if name.endswith("/"):  # ignore directories
                 continue
-            if args.for_real:  # write bytes straight to the terminal
-                sys.stdout.buffer.write(bundle.read(name, password))
-                sys.stdout.buffer.flush()
+            if args.for_real:
+                data = bundle.read(name, password)
+                if args.output_format == "json":
+                    results.append(file_to_dict(name, data))
+                else:  # write bytes straight to the terminal
+                    sys.stdout.buffer.write(data)
+                    sys.stdout.buffer.flush()
             else:
                 log.info(f"{banner}show: {name}")
+
+    if args.for_real and args.output_format == "json":
+        print(json.dumps(results, indent=2))
 
 
 def run(args: Args) -> int:

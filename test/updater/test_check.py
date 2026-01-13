@@ -210,3 +210,37 @@ def test_run_no_bundle() -> None:
     args = baton.parse(Args, split("nonexistent.zip"))
     result = run(args)
     assert result == 2
+
+
+@patch("cosmofy.updater.check.check")
+def test_run_json_output(
+    mock_check: MagicMock, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test run command with JSON output format."""
+    local = Receipt(
+        receipt_url="https://example.com/r.json",
+        release_url="https://example.com/file.exe",
+        version="1.0.0",
+        date="2024-01-01T00:00:00Z",
+    )
+    remote = Receipt(
+        receipt_url="https://example.com/r.json",
+        release_url="https://example.com/file.exe",
+        version="2.0.0",
+        date="2024-06-01T00:00:00Z",
+    )
+    mock_check.return_value = (True, local, remote)
+
+    bundle_path = tmp_path / "bundle.zip"
+    with ZipFile2(bundle_path, "w") as z:
+        z.writestr("test.txt", "content")
+
+    args = baton.parse(Args, split(f"{bundle_path} --output-format json"))
+    result = run(args)
+    assert result == 0
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert data["update_available"] is True
+    assert data["local"]["version"] == "1.0.0"
+    assert data["remote"]["version"] == "2.0.0"

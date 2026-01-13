@@ -4,6 +4,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 from zipfile import is_zipfile
 import logging
 
@@ -11,6 +12,9 @@ import logging
 from .baton import arg
 from .baton import COLOR_MODE
 from .baton import ColorFormatter
+
+OUTPUT_FORMAT = Literal["text", "json"]
+"""Output format for commands that support structured output."""
 
 DRY_RUN = "[`DRY RUN`] "
 """Banner to display when using `--dry-run`."""

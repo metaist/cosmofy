@@ -3,6 +3,7 @@
 # std
 from pathlib import Path
 from shlex import split
+import json
 import tempfile
 
 # lib
@@ -172,3 +173,20 @@ def test_run_error_no_bundle() -> None:
     args = baton.parse(Args, split("nonexistent.zip"))
     result = run(args)
     assert result == 2
+
+
+def test_run_get_args_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test run command with JSON output format."""
+    bundle_path = tmp_path / "bundle.zip"
+    with ZipFile2(bundle_path, "w") as z:
+        z.writestr(".args", "-m\nmymodule")
+
+    args = baton.parse(Args, split(f"{bundle_path} --output-format json"))
+    result = run(args)
+    assert result == 0
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert "args" in data
+    assert "-m" in data["args"]
+    assert "mymodule" in data["args"]

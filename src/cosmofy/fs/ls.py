@@ -15,6 +15,7 @@ from typing import Iterator
 from typing import Literal
 from zipfile import Path as ZipPath
 from zipfile import ZipInfo
+import json
 import logging
 import stat
 import sys
@@ -23,6 +24,7 @@ import sys
 from cosmofy.args import common_args
 from cosmofy.args import CommonArgs
 from cosmofy.args import global_options
+from cosmofy.args import OUTPUT_FORMAT
 from cosmofy.baton import arg
 from cosmofy.baton import Command
 from cosmofy.zipfile2 import ZipFile2
@@ -56,6 +58,7 @@ Output options:
   -l, --long                show permissions, size, and modified date
   -h, --human-readable      show sizes using powers of 1024 like 1K 2M 3G etc.
       --si                  show sizes using powers of 1000 (implies -h)
+      --output-format NAME  [default: text][choices: text, json]
 
 {global_options.replace("-h,", "   ")}
 """
@@ -98,6 +101,9 @@ class Args(CommonArgs):
 
     si: bool = arg(False)
     """Whether to use 1000 instead of 1024 for human-readable chunks."""
+
+    output_format: OUTPUT_FORMAT = arg("text")
+    """Output format: text or json."""
 
 
 def human_size(n: float, si: bool = False) -> str:
@@ -239,10 +245,25 @@ class Runner:
         line.append(f.filename)
         return "".join(line)
 
+    def to_dict(self, f: ZipInfo) -> dict[str, Any]:
+        """Convert ZipInfo to a dictionary for JSON output."""
+        return {
+            "filename": f.filename,
+            "file_size": f.file_size,
+            "compress_size": f.compress_size,
+            "date_time": datetime(*f.date_time).isoformat(),
+            "compress_type": f.compress_type,
+            "is_dir": f.filename.endswith("/"),
+        }
+
     def run(self) -> None:
         """List all files in a bundle."""
-        for f in self.sort(self.get_files()):
-            print(self.format(f))
+        files = list(self.sort(self.get_files()))
+        if self.args.output_format == "json":
+            print(json.dumps([self.to_dict(f) for f in files], indent=2))
+        else:
+            for f in files:
+                print(self.format(f))
 
 
 def run(args: Args) -> int:

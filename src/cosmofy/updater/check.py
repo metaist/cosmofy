@@ -14,6 +14,7 @@ from cosmofy.args import common_args
 from cosmofy.args import CommonArgs
 from cosmofy.args import get_banner
 from cosmofy.args import global_options
+from cosmofy.args import OUTPUT_FORMAT
 from cosmofy.baton import arg
 from cosmofy.baton import Command
 
@@ -36,6 +37,7 @@ Arguments:
 Options:
       --receipt-url <URL>   override the published receipt URL
                             [env: RECEIPT_URL={RECEIPT_URL}]
+      --output-format NAME  [default: text][choices: text, json]
 
 {global_options}
 """
@@ -45,6 +47,8 @@ Options:
 class Args(CommonArgs):
     __doc__ = usage
     receipt_url: str = arg(RECEIPT_URL)
+    output_format: OUTPUT_FORMAT = arg("text")
+    """Output format: text or json."""
 
 
 def get_local_receipt(bundle: ZipFile) -> Receipt:
@@ -98,11 +102,22 @@ def run(args: Args) -> int:
     log.warning("EXPERIMENTAL: `cosmofy updater` operations are experimental")
     try:
         assert args.ensure_bundle() and args.bundle
-        check(
+        is_newer, local, remote = check(
             ZipFile(args.bundle, "r"),
             receipt_url=args.receipt_url,
             dry_run=args.dry_run,
         )
+        if args.output_format == "json":
+            print(
+                json.dumps(
+                    {
+                        "update_available": is_newer,
+                        "local": local.asdict(),
+                        "remote": remote.asdict(),
+                    },
+                    indent=2,
+                )
+            )
     except Exception as e:
         args.show_error(log, e)
         return 2
